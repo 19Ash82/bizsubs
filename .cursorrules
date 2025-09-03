@@ -1,0 +1,52 @@
+1. Be Clear and Goal-Oriented
+   - Clearly describe your UI/UX objectives, features, and design inspirations.
+   - Specify the platform, framework, and any design systems or libraries in use.
+2. Never Rewrite Existing Code Without Confirmation
+   - Do not modify or overwrite existing code unless explicit user confirmation is given.
+   - Always propose changes first and wait for approval before applying them.
+3. Keep Code Clean, Modular, and Well-Documented
+   - Write modular, reusable components with clear, concise documentation.
+   - Use inline comments for complex logic, and document all functions and modules.
+   - For any code updates, comment changes with the date and a brief description (e.g., // Updated 2024-06-10: Improved validation).
+4. Separate Concerns: User/Admin, Client/Server
+   - Maintain separate routes and components for user and admin dashboards.
+   - Clearly distinguish between client-side and server-side code, keeping them in their respective directories.
+   - Ensure role-based access control is implemented and documented.
+5. Prioritize Security and Best Practices (Most important)
+   - Always follow secure coding practices (input validation, XSS/CSRF protection, secure authentication).
+   - Implement robust error handling and user-friendly error messages.
+   - Sanitize and validate all inputs on both client and server sides.
+Other security protocols are in the picture below.
+6. Design for Accessibility, Responsiveness, and Modern UX
+   - Ensure all UI is accessible (WCAG compliance, ARIA roles, keyboard navigation).
+   - Require responsive layouts and mobile-first design principles.
+7. Enforce Coding Standards and Consistency
+   - Adhere to established coding standards (e.g., ESLint, Prettier, TypeScript).
+   - Use design tokens for consistent theming (colors, spacing, typography).
+8. Iterative Development and Feedback
+   - Keep each request focused on a single feature or improvement.
+   - Review and test changes frequently, providing clear, actionable feedback.
+9. Comprehensive Testing and Quality Assurance
+   - Write unit, integration, and end-to-end tests for all components.
+   - Integrate accessibility and security testing tools.
+10. Document All Decisions and Changes
+    - Summarize key design, architectural, and security decisions in project documentation.
+    - Clearly comment all code updates with the date and reason for change.
+	
+
+
+
+## Security (Critical)
+- RLS policies: user_id = auth.uid() minimum
+- Team access: check team_members table
+- No sensitive data in console logs
+- Validate inputs client AND server side
+
+
+## BizSubs Implementation Specifics
+- RLS policies required on all Supabase tables (user_id = auth.uid())
+- Team access: validate via team_members table relationship
+- Client display pattern: "Client A +3 more" for multiple assignments
+- Modal forms only (never separate pages for add/edit)
+- Activity logging on all CRUD operations for team transparency
+- Role-based UI rendering: hide actions for Members, don't show errors
