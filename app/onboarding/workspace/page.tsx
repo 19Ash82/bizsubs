@@ -53,7 +53,7 @@ export default function WorkspaceSetupPage() {
         
         // If company_name already exists, redirect to dashboard
         if (profile.company_name) {
-          router.push("/protected");
+          router.push("/dashboard");
         }
       } catch (error) {
         console.error("Error checking profile:", error);

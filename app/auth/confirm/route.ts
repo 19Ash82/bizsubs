@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
           redirect("/onboarding/workspace");
         } else {
           // Profile complete, redirect to dashboard or specified URL
-          redirect(next === "/" ? "/protected" : next);
+          redirect(next === "/" ? "/dashboard" : next);
         }
       } else {
         redirect(next);

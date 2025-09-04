@@ -86,7 +86,7 @@ export function WorkspaceForm({ userProfile, onSuccess, className }: WorkspaceFo
       if (onSuccess) {
         onSuccess();
       } else {
-        router.push("/protected");
+        router.push("/dashboard");
       }
     } catch (error: any) {
       console.error("Workspace setup error:", error);

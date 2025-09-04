@@ -123,6 +123,6 @@ export function getOnboardingRedirect(status: OnboardingStatus): string {
   } else if (status.needsWorkspace) {
     return "/onboarding/workspace";
   } else {
-    return "/protected";
+    return "/dashboard";
   }
 }
