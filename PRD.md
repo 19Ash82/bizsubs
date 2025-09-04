@@ -58,9 +58,12 @@ Business subscription tracker for freelancers and agencies. Track which tools co
 
 
 ### Magic Link Authentication Flow (New Users)
-- **Step 1: Email Input** - User enters email address on login page
-- **Step 2: Magic Link Email** - System sends email with secure authentication link via Supabase
-- **Step 3: Email Click** - User clicks link in email, redirected to complete profile setup
+- User enters email + password on signup
+- Gets confirmation email
+- Clicks email link → account confirmed
+- User can then login with email + password
+- Gets access or is redirected to complete profile setup
+
 - **Step 4: Profile Setup** - New user onboarding flow:
   - First Name (required)
   - Last Name (required) 

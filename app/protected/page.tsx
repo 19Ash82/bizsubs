@@ -1,8 +1,15 @@
-import { redirect } from "next/navigation";
+// Updated 2024-12-19: Refactored to use modular dashboard components following cursor rules
 
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { InfoIcon } from "lucide-react";
 import { FetchDataSteps } from "@/components/tutorial/fetch-data-steps";
+import {
+  WelcomeHeader,
+  ProfileCard,
+  WorkspaceCard,
+  TrialStatusCard,
+  OnboardingCompleteCard,
+} from "@/components/dashboard";
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
@@ -12,21 +19,39 @@ export default async function ProtectedPage() {
     redirect("/auth/login");
   }
 
+  // Get user profile information
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from("users")
+    .select("first_name, last_name, company_name, subscription_tier, trial_ends_at")
+    .eq("id", user?.id)
+    .single();
+
   return (
-    <div className="flex-1 w-full flex flex-col gap-12">
-      <div className="w-full">
-        <div className="bg-accent text-sm p-3 px-5 rounded-md text-foreground flex gap-3 items-center">
-          <InfoIcon size="16" strokeWidth={2} />
-          This is a protected page that you can only see as an authenticated
-          user
-        </div>
+    <div className="flex-1 w-full flex flex-col gap-8">
+      <WelcomeHeader firstName={profile?.first_name} />
+
+      {/* Profile & Workspace Info */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <ProfileCard
+          firstName={profile?.first_name}
+          lastName={profile?.last_name}
+          email={user?.email}
+        />
+        <WorkspaceCard
+          companyName={profile?.company_name}
+          subscriptionTier={profile?.subscription_tier}
+        />
       </div>
-      <div className="flex flex-col gap-2 items-start">
-        <h2 className="font-bold text-2xl mb-4">Your user details</h2>
-        <pre className="text-xs font-mono p-3 rounded border max-h-32 overflow-auto">
-          {JSON.stringify(data.claims, null, 2)}
-        </pre>
-      </div>
+
+      <TrialStatusCard
+        trialEndsAt={profile?.trial_ends_at}
+        subscriptionTier={profile?.subscription_tier}
+      />
+
+      <OnboardingCompleteCard />
+
+      {/* Next Steps */}
       <div>
         <h2 className="font-bold text-2xl mb-4">Next steps</h2>
         <FetchDataSteps />

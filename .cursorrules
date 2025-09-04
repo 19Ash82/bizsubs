@@ -54,7 +54,11 @@ Other security protocols are in the picture below.
 
 ## File Size Management
 - Break large components into smaller, modular files
-- Create separate component files for each homepage section (Hero, Features, Pricing, FAQ, CTA)
+- Create separate component files for each homepage section
+- Create separate component files for each dashboard section
+- Organize components by feature: components/dashboard/, components/onboarding/, components/settings/, components/subscriptions/, etc
+- Create reusable form components for user data (ProfileForm, WorkspaceForm, SubscriptionForm)
+- Follow PRD.md specifications for component structure and data requirements
 - Main page files should import and compose smaller components
 - Each component should be self-contained with proper TypeScript interfaces
 - When generating UI code, create modular structure instead of single large files
