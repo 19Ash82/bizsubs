@@ -50,3 +50,13 @@ Other security protocols are in the picture below.
 - Modal forms only (never separate pages for add/edit)
 - Activity logging on all CRUD operations for team transparency
 - Role-based UI rendering: hide actions for Members, don't show errors
+
+
+## File Size Management
+- Break large components into smaller, modular files
+- Create separate component files for each homepage section (Hero, Features, Pricing, FAQ, CTA)
+- Main page files should import and compose smaller components
+- Each component should be self-contained with proper TypeScript interfaces
+- When generating UI code, create modular structure instead of single large files
+- Component files should be under 200 lines when possible
+- Use proper file organization: components/[feature]/[ComponentName].tsx
