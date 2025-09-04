@@ -13,6 +13,7 @@ import {
   RecentActivityFeed,
   QuickActionButtons,
 } from "@/components/dashboard";
+import { AddSubscriptionModal } from "@/components/dashboard/AddSubscriptionModal";
 
 interface DashboardData {
   user: any;
@@ -55,6 +56,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showAddSubscriptionModal, setShowAddSubscriptionModal] = useState(false);
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -176,6 +178,127 @@ export default function DashboardPage() {
     loadDashboardData();
   }, []);
 
+  const handleRefreshData = () => {
+    setLoading(true);
+    const supabase = createClient();
+    
+    async function refreshData() {
+      try {
+        // Get user profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        // Get clients
+        const { data: clients } = await supabase
+          .from("clients")
+          .select("id, name, color_hex")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .order("name");
+
+        // Get subscriptions for metrics and upcoming renewals
+        const { data: subscriptions } = await supabase
+          .from("subscriptions")
+          .select(`
+            *,
+            clients (name, color_hex)
+          `)
+          .eq("user_id", user.id)
+          .eq("status", "active");
+
+        // Get recent activity
+        const { data: activities } = await supabase
+          .from("activity_logs")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("timestamp", { ascending: false })
+          .limit(10);
+
+        // Calculate metrics
+        const totalMonthlyRecurring = subscriptions?.reduce((sum, sub) => {
+          const monthlyAmount = sub.billing_cycle === 'monthly' ? sub.cost :
+                               sub.billing_cycle === 'annual' ? sub.cost / 12 :
+                               sub.billing_cycle === 'quarterly' ? sub.cost / 3 :
+                               sub.billing_cycle === 'weekly' ? sub.cost * 4.33 : sub.cost;
+          return sum + monthlyAmount;
+        }, 0) || 0;
+
+        const annualBusinessSpend = subscriptions?.reduce((sum, sub) => {
+          const annualAmount = sub.billing_cycle === 'annual' ? sub.cost :
+                              sub.billing_cycle === 'monthly' ? sub.cost * 12 :
+                              sub.billing_cycle === 'quarterly' ? sub.cost * 4 :
+                              sub.billing_cycle === 'weekly' ? sub.cost * 52 : sub.cost * 12;
+          return sum + (sub.business_expense ? annualAmount : 0);
+        }, 0) || 0;
+
+        const taxDeductibleAmount = subscriptions?.reduce((sum, sub) => {
+          const annualAmount = sub.billing_cycle === 'annual' ? sub.cost :
+                              sub.billing_cycle === 'monthly' ? sub.cost * 12 :
+                              sub.billing_cycle === 'quarterly' ? sub.cost * 4 :
+                              sub.billing_cycle === 'weekly' ? sub.cost * 52 : sub.cost * 12;
+          return sum + (sub.tax_deductible ? annualAmount : 0);
+        }, 0) || 0;
+
+        // Get renewals for this month
+        const now = new Date();
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const thisMonthRenewals = subscriptions?.reduce((sum, sub) => {
+          const renewalDate = new Date(sub.next_billing_date);
+          if (renewalDate >= now && renewalDate <= endOfMonth) {
+            return sum + sub.cost;
+          }
+          return sum;
+        }, 0) || 0;
+
+        // Get upcoming renewals (next 30 days)
+        const next30Days = new Date();
+        next30Days.setDate(next30Days.getDate() + 30);
+        
+        const upcomingRenewals = subscriptions?.filter(sub => {
+          const renewalDate = new Date(sub.next_billing_date);
+          return renewalDate >= now && renewalDate <= next30Days;
+        }).map(sub => ({
+          id: sub.id,
+          service_name: sub.service_name,
+          cost: sub.cost,
+          currency: sub.currency,
+          next_billing_date: sub.next_billing_date,
+          billing_cycle: sub.billing_cycle,
+          client_name: sub.clients?.name,
+          client_color: sub.clients?.color_hex,
+          status: sub.status,
+        })).sort((a, b) => new Date(a.next_billing_date).getTime() - new Date(b.next_billing_date).getTime()) || [];
+
+        setData({
+          user,
+          profile,
+          metrics: {
+            totalMonthlyRecurring,
+            annualBusinessSpend,
+            taxDeductibleAmount,
+            thisMonthRenewals,
+            currency: profile?.currency_preference || 'USD',
+          },
+          clients: clients || [],
+          upcomingRenewals,
+          recentActivity: activities || [],
+        });
+      } catch (error) {
+        console.error('Error refreshing dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    refreshData();
+  };
+
   if (loading) {
     return (
       <div className="flex-1 w-full flex items-center justify-center">
@@ -217,7 +340,7 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <QuickActionButtons
         userTier={data.profile?.subscription_tier}
-        onAddSubscription={() => console.log('Add subscription')}
+        onAddSubscription={() => setShowAddSubscriptionModal(true)}
         onAddLifetimeDeal={() => console.log('Add lifetime deal')}
         onExportReport={() => console.log('Export report')}
         onInviteTeamMember={() => console.log('Invite team member')}
@@ -236,6 +359,16 @@ export default function DashboardPage() {
           maxItems={8}
         />
       </div>
+
+      {/* Add Subscription Modal */}
+      <AddSubscriptionModal
+        open={showAddSubscriptionModal}
+        onOpenChange={setShowAddSubscriptionModal}
+        onSuccess={handleRefreshData}
+        userTier={data.profile?.subscription_tier}
+        userCurrency={data.profile?.currency_preference}
+        userTaxRate={data.profile?.tax_rate}
+      />
     </div>
   );
 }

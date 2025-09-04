@@ -1,8 +1,7 @@
 // Updated 2024-12-19: Enhanced layout with dashboard sidebar navigation
 
-import { AuthButton } from "@/components/auth-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { DashboardSidebar } from "@/components/dashboard";
+import { DashboardSidebar, UserProfileDropdown } from "@/components/dashboard";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -67,7 +66,7 @@ export default async function ProtectedLayout({
               </div>
               <div className="flex items-center gap-4">
                 <ThemeSwitcher />
-                <AuthButton />
+                <UserProfileDropdown />
               </div>
             </div>
           </header>

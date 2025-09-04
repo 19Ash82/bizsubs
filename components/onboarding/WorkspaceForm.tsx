@@ -21,6 +21,7 @@ interface WorkspaceFormProps {
 
 export function WorkspaceForm({ userProfile, onSuccess, className }: WorkspaceFormProps) {
   const [companyName, setCompanyName] = useState("");
+  const [taxRate, setTaxRate] = useState(30.0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -52,11 +53,12 @@ export function WorkspaceForm({ userProfile, onSuccess, className }: WorkspaceFo
         throw new Error("User not authenticated");
       }
 
-      // Update user profile with company name
+      // Update user profile with company name and tax rate
       const { error: profileError } = await supabase
         .from("users")
         .update({
           company_name: companyName.trim(),
+          tax_rate: taxRate,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id);
@@ -120,6 +122,25 @@ export function WorkspaceForm({ userProfile, onSuccess, className }: WorkspaceFo
           />
           <p className="text-sm text-muted-foreground">
             This will be your workspace name and can be changed later in settings.
+          </p>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="taxRate">Business Tax Rate (%) *</Label>
+          <Input
+            id="taxRate"
+            type="number"
+            step="0.1"
+            min="0"
+            max="100"
+            placeholder="30.0"
+            required
+            value={taxRate}
+            onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+            disabled={isLoading}
+          />
+          <p className="text-sm text-muted-foreground">
+            Your default tax rate for business expenses. This will be used as the default for new subscriptions and can be changed per subscription.
           </p>
         </div>
 
