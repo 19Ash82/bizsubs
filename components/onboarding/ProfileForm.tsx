@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { testDatabaseConnection } from "@/lib/utils/database-test";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,33 +53,70 @@ export function ProfileForm({ onSuccess, className }: ProfileFormProps) {
     }
 
     try {
+      // First, run database connection test
+      console.log("Running database connection test...");
+      const dbTest = await testDatabaseConnection();
+      console.log("Database test result:", dbTest);
+      
+      if (!dbTest.success) {
+        throw new Error(`Database connection failed: ${dbTest.error}`);
+      }
+
       const supabase = createClient();
       
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        throw new Error("User not authenticated");
+      if (userError) {
+        console.error("Auth error:", userError);
+        throw new Error(`Authentication error: ${userError.message}`);
       }
+      if (!user) {
+        throw new Error("No authenticated user found");
+      }
+
+      // Debug logging (no sensitive data per cursor rules)
+      console.log("Creating profile for user ID:", user.id);
 
       // Create or update user profile
-      const { error: profileError } = await supabase
+      const profileData = {
+        id: user.id,
+        email: user.email || "",
+        first_name: formData.firstName.trim(),
+        last_name: formData.lastName.trim(),
+        subscription_tier: "trial",
+        trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        currency_preference: "USD",
+        financial_year_end: "12-31",
+        tax_rate: 30.0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Debug logging (structure only, no sensitive data)
+      console.log("Profile data structure:", {
+        hasId: !!profileData.id,
+        hasEmail: !!profileData.email,
+        hasFirstName: !!profileData.first_name,
+        hasLastName: !!profileData.last_name,
+        subscriptionTier: profileData.subscription_tier
+      });
+
+      const { data: profileResult, error: profileError } = await supabase
         .from("users")
-        .upsert({
-          id: user.id,
-          email: user.email,
-          first_name: formData.firstName.trim(),
-          last_name: formData.lastName.trim(),
-          subscription_tier: "trial", // New users get 7-day trial
-          trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          currency_preference: "USD",
-          financial_year_end: "12-31",
-          tax_rate: 30.0,
-          updated_at: new Date().toISOString(),
-        });
+        .upsert(profileData, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        })
+        .select();
+
+      console.log("Profile upsert result:", { data: profileResult, error: profileError });
 
       if (profileError) {
-        throw profileError;
+        console.error("Profile error details:", profileError);
+        throw new Error(`Profile creation failed: ${profileError.message || 'Unknown error'}`);
       }
+
+      console.log("Profile created successfully, redirecting...");
 
       // Call success callback or redirect
       if (onSuccess) {
@@ -88,7 +126,19 @@ export function ProfileForm({ onSuccess, className }: ProfileFormProps) {
       }
     } catch (error: any) {
       console.error("Profile setup error:", error);
-      setError(error.message || "An error occurred while setting up your profile");
+      
+      // Better error handling
+      let errorMessage = "An error occurred while setting up your profile";
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error?.error_description) {
+        errorMessage = error.error_description;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
