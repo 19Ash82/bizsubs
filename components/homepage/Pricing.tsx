@@ -29,7 +29,7 @@ const pricingTiers: PricingTier[] = [
     price: "$0",
     description: "Perfect for getting started with basic subscription tracking",
     features: [
-      { name: "Track up to 2 total items", included: true },
+      { name: "Track up to 3 total items", included: true },
       { name: "Basic dashboard overview", included: true },
       { name: "Manual data entry", included: true },
       { name: "Cloud storage", included: true },
@@ -221,7 +221,7 @@ export function Pricing() {
                 </h4>
                 <ul className="space-y-1">
                   <li>• Keep all your data</li>
-                  <li>• Continue with Free plan (2 items max)</li>
+                  <li>• Continue with Free plan (3 items max)</li>
                   <li>• Upgrade anytime to unlock full features</li>
                   <li>• No surprise charges</li>
                 </ul>

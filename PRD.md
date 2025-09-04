@@ -11,7 +11,7 @@ Business subscription tracker for freelancers and agencies. Track which tools co
 ## Freemium Model & Pricing
 
 ### Free Tier
-- Track up to 2 total items (subscriptions + lifetime deals combined)
+- Track up to 3 total items (subscriptions + lifetime deals combined)
 - Basic dashboard overview
 - Manual data entry only
 - Cloud storage via Supabase
