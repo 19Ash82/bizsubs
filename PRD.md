@@ -25,11 +25,10 @@ Business subscription tracker for freelancers and agencies. Track which tools co
 - Up to 3 team members
 - Priority email support
 
-### Business Pro Tier
+### Business Premium Tier
 - **$24.99/month or $249/year** (save $50)
 - Everything in Business tier
-- Unlimited team members
-- Advanced reporting features
+- Un to 25 team members
 - Priority support with faster response times
 
 ### 7-Day Premium Trial
@@ -54,42 +53,48 @@ Business subscription tracker for freelancers and agencies. Track which tools co
 - **Step 1: Email Input** - User enters email address on login page
 - **Step 2: Magic Link Email** - System sends email with secure authentication link via Supabase
 - **Step 3: Email Click** - User clicks link in email, redirected to complete profile setup
-- **Step 4: Profile Completion** - User completes registration with required fields:
+- **Step 4: Profile Setup** - New user onboarding flow:
   - First Name (required)
   - Last Name (required) 
-  - Organization/Company Name (required)
-  - Role: Admin (default for new signups), Member (for invited users)
+  - Save profile → Next step
+- **Step 5: Workspace Setup** - Company/Workspace name entry:
+  - Company Name (required) - becomes default workspace name
+  - Role: Admin (default for new signups)
   - Password (required for account security)
-- **Step 5: Dashboard Access** - User gains access to dashboard based on their tier and role
+- **Step 6: Dashboard Access** - User gains access to dashboard based on their tier and role
+
+**Member Invitation Flow:**
+- **Step 1-3**: Same magic link process
+- **Step 4: Profile Setup** - Invited member completes:
+  - First Name (required)
+  - Last Name (required)
+  - Password (required)
+  - Role: Member (automatically assigned)
+- **Step 5: Join Workspace** - Automatically joins existing workspace, no workspace setup needed
 
 ### Account Management & Settings Page
-- **Profile Section**:
+- **Profile Tab**:
   - First Name, Last Name (editable)
   - Email Address (editable with verification)
-  - Organization/Company Name (editable)
-  - Role (read-only, set during signup or invitation)
-- **Business Settings**:
+  - Password change
+- **Workspace Tab**:
+  - Workspace Name (editable for admins only, read-only for members)
   - Financial Year End Date
   - Tax Rate Configuration  
   - Currency Preference
-- **Team Management** (Admin only):
+- **Team Tab** (Admin only):
   - Invite team members by email
   - Manage existing team member roles
   - Remove team members
-- **Billing & Subscription** (Admin only):
+- **Billing & Subscription Tab** (Admin only):
   - Current plan details
   - Billing history
   - Update payment method
   - Cancel subscription
-- **Security Settings**:
-  - Change password
-  - Two-factor authentication (future feature)
-  - Active sessions management
 
 ### Login System
 - **Required login** to access dashboard and features
-- **Magic Link Authentication** via Supabase Auth (primary method)
-- **Google OAuth option** for quick signup (secondary)
+- **Magic Link Authentication** via Supabase Auth
 - **Landing page** with signup/login for unauthenticated users
 - **Password reset** functionality via email magic link
 
@@ -167,7 +172,7 @@ Trial-to-free transition explanation
   - Annual Business Spend: $9,456
   - Tax Deductible Amount: $7,234
   - This Month's Renewals: $1,203
-- **Tier Status Indicator**: Prominent card showing "Free Plan (1/2 items used)" or "Business Trial (3 days left)" or "Business Plan"
+- **Tier Status Indicator**: Prominent card showing "Free Plan (1/3 items used)" or "Business Trial (3 days left)" or "Business Plan"
 - **Trial Countdown**: Highlighted card with remaining trial days and upgrade CTA
 - **Client Filter Bar**: Dropdown "All Clients" with search functionality affecting entire dashboard
 - **Smart Client Display**: 
@@ -236,7 +241,8 @@ Trial-to-free transition explanation
 
 ### Team Settings Structure:
 **Admin Settings:**
-- Account Details & Profile
+- Account Details & Profile (First name, Last name)
+- WorkSpace : [Company Name]- 
 - Financial Year End Date
 - Tax Rate Configuration
 - Currency Preference
@@ -365,7 +371,7 @@ Trial-to-free transition explanation
 - No manual cache invalidation or sync button complexity
 
 ### users
-- email, name, company_name, subscription_tier, trial_ends_at, currency_preference, financial_year_end, tax_rate
+- email, first_name, last_name, company_name, subscription_tier, trial_ends_at, currency_preference, financial_year_end, tax_rate
 
 ### subscriptions
 - service_name, cost, billing_cycle, next_billing_date, client_name, project_name, category, business_expense, tax_deductible, status, notes, currency, created_at, updated_at
@@ -473,10 +479,7 @@ Trial-to-free transition explanation
 - **Retention**: 70% at 30 days, 50% at 90 days, 35% at 180 days
 - **Usage**: Business users averaging 15+ subscriptions tracked
 
-
-
-
-File Structure
+## File Structure
 
 ```
 bizsubs/
@@ -513,3 +516,4 @@ bizsubs/
 │   └── utils.ts          # General utilities
 ├── types/                # TypeScript type definitions
 └── styles/               # Global styles
+```
