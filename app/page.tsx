@@ -1,51 +1,107 @@
-import { DeployButton } from "@/components/deploy-button";
-import { EnvVarWarning } from "@/components/env-var-warning";
-import { AuthButton } from "@/components/auth-button";
-import { Hero } from "@/components/hero";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { ConnectSupabaseSteps } from "@/components/tutorial/connect-supabase-steps";
-import { SignUpUserSteps } from "@/components/tutorial/sign-up-user-steps";
-import { hasEnvVars } from "@/lib/utils";
-import Link from "next/link";
+// Created 2024-12-19: BizSubs homepage - modular component composition
+// SEO-optimized marketing page following PRD specifications
 
-export default function Home() {
+import { Metadata } from "next";
+import { 
+  Navigation, 
+  Hero, 
+  Problem,
+  Solution,
+  ValueProposition,
+  FeatureHighlights,
+  Features, 
+  Pricing,
+  Testimonials, 
+  FAQ, 
+  CTA, 
+  Footer 
+} from "@/components/homepage";
+
+export const metadata: Metadata = {
+  title: "BizSubs - Track Business Subscriptions. Organize Client Costs. Export for Taxes.",
+  description: "The subscription tracker built for freelancers and agencies who need to organize business expenses and allocate costs to clients. 7-day free trial, no credit card required.",
+  keywords: [
+    "business subscriptions",
+    "subscription tracker", 
+    "freelancer tools",
+    "agency tools",
+    "tax deductions",
+    "client billing",
+    "subscription management",
+    "business expense tracking",
+    "lifetime deals",
+    "SaaS management"
+  ].join(", "),
+  authors: [{ name: "BizSubs" }],
+  creator: "BizSubs",
+  publisher: "BizSubs",
+  openGraph: {
+    title: "BizSubs - Track Business Subscriptions. Organize Client Costs. Export for Taxes.",
+    description: "The subscription tracker built for freelancers and agencies who need to organize business expenses and allocate costs to clients.",
+    type: "website",
+    locale: "en_US",
+    siteName: "BizSubs",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BizSubs - Track Business Subscriptions. Organize Client Costs. Export for Taxes.",
+    description: "The subscription tracker built for freelancers and agencies who need to organize business expenses and allocate costs to clients.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  verification: {
+    // Add verification codes when available
+    // google: "verification-code",
+  },
+};
+
+export default function HomePage() {
   return (
-    <main className="min-h-screen flex flex-col items-center">
-      <div className="flex-1 w-full flex flex-col gap-20 items-center">
-        <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-          <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
-            <div className="flex gap-5 items-center font-semibold">
-              <Link href={"/"}>Next.js Supabase Starter</Link>
-              <div className="flex items-center gap-2">
-                <DeployButton />
-              </div>
-            </div>
-            {!hasEnvVars ? <EnvVarWarning /> : <AuthButton />}
-          </div>
-        </nav>
-        <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5">
-          <Hero />
-          <main className="flex-1 flex flex-col gap-6 px-4">
-            <h2 className="font-medium text-xl mb-4">Next steps</h2>
-            {hasEnvVars ? <SignUpUserSteps /> : <ConnectSupabaseSteps />}
-          </main>
-        </div>
+    <main className="min-h-screen flex flex-col">
+      {/* Navigation */}
+      <Navigation />
 
-        <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
-          <p>
-            Powered by{" "}
-            <a
-              href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-              target="_blank"
-              className="font-bold hover:underline"
-              rel="noreferrer"
-            >
-              Supabase
-            </a>
-          </p>
-          <ThemeSwitcher />
-        </footer>
+      {/* Page Content */}
+      <div className="flex-1">
+        {/* Hero Section */}
+        <Hero />
+
+        {/* Problem Section */}
+        <Problem />
+
+        {/* Solution Section */}
+        <Solution />
+
+        {/* Value Proposition Section */}
+        <ValueProposition />
+
+        {/* Feature Highlights Section */}
+        <FeatureHighlights />
+
+        {/* Pricing Section */}
+        <Pricing />
+
+        {/* Testimonials Section */}
+        <Testimonials />
+
+        {/* FAQ Section */}
+        <FAQ />
+
+        {/* CTA Section */}
+        <CTA />
       </div>
+
+      {/* Footer */}
+      <Footer />
     </main>
   );
 }

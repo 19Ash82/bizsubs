@@ -11,7 +11,7 @@ Business subscription tracker for freelancers and agencies. Track which tools co
 ## Freemium Model & Pricing
 
 ### Free Tier
-- Track up to 2 total items (subscriptions + lifetime deals combined)
+- Track up to 3 total items (subscriptions + lifetime deals combined)
 - Basic dashboard overview
 - Manual data entry only
 - Cloud storage via Supabase
@@ -102,12 +102,49 @@ Business subscription tracker for freelancers and agencies. Track which tools co
 ## Core Features
 
 ### 1. Landing Page & Marketing
-- Business-focused hero: "Stop Bleeding Money on Business Subscriptions"
-- Value props: Client cost allocation, tax-ready exports, lifetime deal tracking
-- Clear pricing: Free (2 items) vs Business ($12.99/month)
-- Business testimonials and case studies
-- FAQ section addressing business user concerns
-- SEO optimized for business subscription management keywords
+Hero Section:
+
+Primary headline: "Track Business Subscriptions. Organize Client Costs. Export for Taxes."
+Subheadline: "The subscription tracker built for freelancers and agencies who need to organize business expenses and allocate costs to clients."
+CTA: "Start 7-Day Free Trial" (no credit card required)
+Secondary CTA: "View Demo"
+
+Problem Section:
+
+"Managing business subscriptions across multiple clients is messy"
+Pain points: Scattered receipts, unclear client cost allocation, tax season chaos, team members using different tools
+Brief, relatable scenarios without dramatic language
+
+Solution Section:
+
+"BizSubs organizes everything in one place"
+Core solution pillars: Centralized tracking, client assignment, automated categorization, team collaboration
+Visual preview of organized dashboard
+
+Value Proposition (Why Us):
+
+Built specifically for business users (not personal finance)
+Client-project cost allocation other tools don't offer
+Tax-ready exports with customizable financial year settings
+Team collaboration with role-based permissions
+Lifetime deal tracking for ROI analysis
+
+Feature Highlights:
+
+Visual previews of dashboard, client filtering, export functionality
+Mobile-responsive design showcase
+Integration capabilities
+
+Pricing Section:
+
+Clear freemium comparison: Free (2 items) vs Business ($12.99/month)
+7-day trial emphasis with "no credit card required"
+Annual discount highlighting ($129/year saves $26)
+
+FAQ Section:
+
+Target freelancer/agency concerns about data security, team access, export formats
+Trial-to-free transition explanation
 
 ### 2. Dashboard Overview
 
@@ -435,3 +472,44 @@ Business subscription tracker for freelancers and agencies. Track which tools co
 - **Conversion**: 8-12% trial to paid conversion rate
 - **Retention**: 70% at 30 days, 50% at 90 days, 35% at 180 days
 - **Usage**: Business users averaging 15+ subscriptions tracked
+
+
+
+
+File Structure
+
+```
+bizsubs/
+├── app/                    # Next.js 14 app router
+│   ├── (auth)/            # Auth-related pages
+│   │   ├── login/
+│   │   └── signup/
+│   ├── (dashboard)/       # Protected dashboard pages
+│   │   ├── dashboard/     # Main dashboard
+│   │   ├── subscriptions/ # Subscription management
+│   │   ├── lifetime/      # Lifetime deals
+│   │   ├── analytics/     # Premium analytics
+│   │   └── settings/      # User settings
+│   ├── (marketing)/       # Public pages
+│   │   ├── page.tsx       # Landing page
+│   │   ├── pricing/       # Pricing page
+│   │   └── about/
+│   └── api/               # API routes
+│       ├── auth/          # Auth endpoints
+│       ├── stripe/        # Payment webhooks
+│       └── sync/          # Data sync endpoints
+├── components/            # React components
+│   ├── ui/               # Shadcn/ui base components
+│   ├── auth/             # Authentication components
+│   ├── dashboard/        # Dashboard-specific components
+│   ├── subscription/     # Subscription management
+│   ├── billing/          # Payment/billing components
+│   └── common/           # Shared components
+├── lib/                  # Utilities and configurations
+│   ├── supabase/         # Supabase client and types
+│   ├── stripe/           # Stripe configuration
+│   ├── storage/          # Local storage utilities
+│   ├── hooks/            # Custom React hooks
+│   └── utils.ts          # General utilities
+├── types/                # TypeScript type definitions
+└── styles/               # Global styles
