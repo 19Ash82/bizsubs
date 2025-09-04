@@ -3,13 +3,38 @@ import { EnvVarWarning } from "@/components/env-var-warning";
 import { AuthButton } from "@/components/auth-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { hasEnvVars } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 
-export default function ProtectedLayout({
+export default async function ProtectedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Check authentication and onboarding status
+  const supabase = await createClient();
+  
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  // Redirect to login if not authenticated
+  if (error || !user) {
+    redirect("/auth/login");
+  }
+
+  // Check if user has completed onboarding
+  const { data: profile } = await supabase
+    .from("users")
+    .select("first_name, last_name, company_name")
+    .eq("id", user.id)
+    .single();
+  
+  // Redirect to appropriate onboarding step if profile is incomplete
+  if (!profile || !profile.first_name || !profile.last_name) {
+    redirect("/onboarding/profile");
+  } else if (!profile.company_name) {
+    redirect("/onboarding/workspace");
+  }
   return (
     <main className="min-h-screen flex flex-col items-center">
       <div className="flex-1 w-full flex flex-col gap-20 items-center">
