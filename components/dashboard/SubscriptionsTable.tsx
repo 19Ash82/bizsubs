@@ -437,7 +437,7 @@ export function SubscriptionsTable({
   onEditSubscription,
   onDeleteSubscription,
   onAddSubscription,
-  onDataLoaded
+  onDataLoaded = () => {} // Default no-op function to ensure consistent dependency array
 }: SubscriptionsTableProps) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -466,20 +466,18 @@ export function SubscriptionsTable({
     fetchProjects();
   }, []);
 
-  // Notify parent when data is loaded - separate effect for stability
+  // Notify parent when data is loaded - consistent dependency array
   useEffect(() => {
     if (!loading && clients.length >= 0 && projects.length >= 0 && subscriptions.length >= 0 && !hasNotifiedParent.current) {
       hasNotifiedParent.current = true;
-      // Use setTimeout to avoid calling during render
-      setTimeout(() => {
-        onDataLoaded?.({
-          clients,
-          projects,
-          subscriptionCount: subscriptions.length
-        });
-      }, 0);
+      const tableData = {
+        clients,
+        projects,
+        subscriptionCount: subscriptions.length
+      };
+      onDataLoaded(tableData);
     }
-  }, [loading, clients, projects, subscriptions]);
+  }, [loading, clients, projects, subscriptions, onDataLoaded]);
 
   // Reset notification flag when component mounts (due to key prop change)
   useEffect(() => {
