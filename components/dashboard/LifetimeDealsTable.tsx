@@ -47,6 +47,7 @@ import {
   Loader2,
   AlertCircle,
   TrendingUp,
+  X,
   TrendingDown
 } from 'lucide-react';
 import { useLifetimeDeals, useDeleteLifetimeDeal, type LifetimeDeal } from '@/lib/react-query/lifetime-deals';
@@ -61,7 +62,7 @@ interface LifetimeDealsTableProps {
   userTier?: 'free' | 'pro' | 'team';
   userRole?: 'admin' | 'member';
   onEditLifetimeDeal?: (lifetimeDeal: LifetimeDeal) => void;
-  onDeleteLifetimeDeal?: (id: string) => void;
+  onDeleteLifetimeDeal?: (id: string | string[], lifetimeDealNames?: string[]) => void;
   onAddLifetimeDeal?: () => void;
   onDuplicateLifetimeDeal?: (lifetimeDeal: LifetimeDeal) => void;
   onDataLoaded?: (data: { clients: any[], projects: any[], lifetimeDealCount: number }) => void;
@@ -85,6 +86,48 @@ const CATEGORIES = [
   'hosting',
   'other'
 ];
+
+// Bulk operations toolbar
+const BulkOperationsToolbar = ({ 
+  selectedCount, 
+  onClearSelection, 
+  onBulkEdit, 
+  onBulkDelete,
+  userRole = 'admin'
+}: {
+  selectedCount: number;
+  onClearSelection: () => void;
+  onBulkEdit: () => void;
+  onBulkDelete: () => void;
+  userRole?: 'admin' | 'member';
+}) => (
+  <div className="flex items-center justify-between p-4 bg-violet-50 border border-violet-200 rounded-lg mb-4">
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <Checkbox checked={true} />
+        <span className="text-sm font-medium">
+          {selectedCount} lifetime deal{selectedCount !== 1 ? 's' : ''} selected
+        </span>
+      </div>
+      <Button variant="ghost" size="sm" onClick={onClearSelection}>
+        <X className="w-4 h-4" />
+      </Button>
+    </div>
+    
+    {userRole === 'admin' && (
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={onBulkEdit}>
+          <Edit className="w-4 h-4 mr-2" />
+          Edit Selected
+        </Button>
+        <Button variant="outline" size="sm" onClick={onBulkDelete} className="text-red-600 hover:text-red-700">
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete Selected
+        </Button>
+      </div>
+    )}
+  </div>
+);
 
 const MobileLifetimeDealCard = ({ 
   lifetimeDeal, 
@@ -403,6 +446,33 @@ export function LifetimeDealsTable({
     setSelectedLifetimeDeals(newSelection);
   };
 
+  // Bulk operations
+  const handleBulkEdit = () => {
+    // TODO: Implement bulk edit modal
+    console.log('Bulk edit:', Array.from(selectedLifetimeDeals));
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedLifetimeDeals.size === 0) return;
+    
+    const selectedIds = Array.from(selectedLifetimeDeals);
+    const selectedNames = filteredAndSortedLifetimeDeals
+      .filter(deal => selectedIds.includes(deal.id))
+      .map(deal => deal.service_name);
+    
+    // Call the delete handler with the array of selected IDs and names for bulk delete
+    if (onDeleteLifetimeDeal) {
+      onDeleteLifetimeDeal(selectedIds, selectedNames);
+    }
+    
+    // Clear selection
+    setSelectedLifetimeDeals(new Set());
+  };
+
+  const handleClearSelection = () => {
+    setSelectedLifetimeDeals(new Set());
+  };
+
   const formatCurrency = (amount: number, currency: string) => {
     const symbols: Record<string, string> = {
       'USD': '$',
@@ -463,6 +533,17 @@ export function LifetimeDealsTable({
 
   return (
     <div className="space-y-6">
+      {/* Bulk Operations Toolbar */}
+      {selectedLifetimeDeals.size > 0 && (
+        <BulkOperationsToolbar
+          selectedCount={selectedLifetimeDeals.size}
+          onClearSelection={handleClearSelection}
+          onBulkEdit={handleBulkEdit}
+          onBulkDelete={handleBulkDelete}
+          userRole={userRole}
+        />
+      )}
+
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">

@@ -67,6 +67,9 @@ export function SubscriptionsPageClient({ profile, userRole }: SubscriptionsPage
   const [refreshKey, setRefreshKey] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [subscriptionToDelete, setSubscriptionToDelete] = useState<string | null>(null);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [subscriptionsToDelete, setSubscriptionsToDelete] = useState<string[]>([]);
+  const [subscriptionNamesToDelete, setSubscriptionNamesToDelete] = useState<string[]>([]);
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalMonthly: 0,
     activeCount: 0,
@@ -187,9 +190,66 @@ export function SubscriptionsPageClient({ profile, userRole }: SubscriptionsPage
     setShowEditModal(true);
   };
 
-  const handleDeleteSubscription = async (subscriptionId: string) => {
-    setSubscriptionToDelete(subscriptionId);
-    setShowDeleteConfirm(true);
+  const handleDeleteSubscription = async (subscriptionId: string | string[], subscriptionNames?: string[]) => {
+    // Handle both single and bulk deletion
+    if (Array.isArray(subscriptionId)) {
+      // Bulk delete - show beautiful confirmation modal
+      setSubscriptionsToDelete(subscriptionId);
+      setSubscriptionNamesToDelete(subscriptionNames || []);
+      setShowBulkDeleteConfirm(true);
+    } else {
+      // Single delete - show confirmation dialog
+      setSubscriptionToDelete(subscriptionId);
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  // Handle bulk delete confirmation
+  const confirmBulkDelete = async () => {
+    try {
+      const supabase = createClient();
+      
+      // Get subscription details for logging
+      const { data: subscriptions } = await supabase
+        .from('subscriptions')
+        .select('id, service_name')
+        .in('id', subscriptionsToDelete);
+
+      // Delete all subscriptions in a single query for efficiency
+      const { error } = await supabase
+        .from('subscriptions')
+        .delete()
+        .in('id', subscriptionsToDelete);
+
+      if (error) throw error;
+
+      // Log the activities
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData.user && subscriptions) {
+        const activityLogs = subscriptions.map(subscription => ({
+          user_id: userData.user.id,
+          user_email: userData.user.email!,
+          action_type: 'delete' as const,
+          resource_type: 'subscription' as const,
+          resource_id: subscription.id,
+          description: `Deleted subscription: ${subscription.service_name}`,
+        }));
+
+        await supabase.from('activity_logs').insert(activityLogs);
+      }
+
+      // Refresh the table and metrics
+      setRefreshKey(prev => prev + 1);
+      
+    } catch (error) {
+      console.error('Error deleting subscriptions:', error);
+      // TODO: Show error toast
+      alert('Failed to delete subscriptions. Please try again.');
+    } finally {
+      setShowBulkDeleteConfirm(false);
+      setSubscriptionsToDelete([]);
+      setSubscriptionNamesToDelete([]);
+    }
   };
 
   const confirmDelete = async () => {
@@ -515,6 +575,53 @@ export function SubscriptionsPageClient({ profile, userRole }: SubscriptionsPage
                 >
                   Delete
                 </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Bulk Delete Confirmation Dialog */}
+        {showBulkDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-md">
+              <CardHeader>
+                <CardTitle className="text-red-600">Delete Subscriptions</CardTitle>
+                <CardDescription>
+                  Are you sure you want to delete {subscriptionsToDelete.length} subscription{subscriptionsToDelete.length > 1 ? 's' : ''}? This action cannot be undone.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {subscriptionNamesToDelete.length > 0 && (
+                  <div className="max-h-32 overflow-y-auto">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Subscriptions to delete:</p>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      {subscriptionNamesToDelete.map((name, index) => (
+                        <li key={index} className="flex items-center">
+                          <span className="w-2 h-2 bg-red-400 rounded-full mr-2 flex-shrink-0"></span>
+                          {name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowBulkDeleteConfirm(false);
+                      setSubscriptionsToDelete([]);
+                      setSubscriptionNamesToDelete([]);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={confirmBulkDelete}
+                  >
+                    Delete {subscriptionsToDelete.length} Subscription{subscriptionsToDelete.length > 1 ? 's' : ''}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

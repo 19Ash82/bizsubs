@@ -91,7 +91,7 @@ interface SubscriptionsTableProps {
   userTier?: string;
   userRole?: 'admin' | 'member';
   onEditSubscription?: (subscription: Subscription) => void;
-  onDeleteSubscription?: (subscriptionId: string) => void;
+  onDeleteSubscription?: (subscriptionId: string | string[], subscriptionNames?: string[]) => void;
   onAddSubscription?: () => void;
   onDuplicateSubscription?: (subscription: Subscription) => void;
   onDataLoaded?: (data: { clients: Client[]; projects: Project[]; subscriptionCount: number }) => void;
@@ -683,24 +683,13 @@ export function SubscriptionsTable({
       .filter(sub => selectedIds.includes(sub.id))
       .map(sub => sub.service_name);
     
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${selectedIds.length} subscription${selectedIds.length > 1 ? 's' : ''}?\n\n` +
-      selectedNames.join('\n') +
-      '\n\nThis action cannot be undone.'
-    );
-    
-    if (confirmed) {
-      // Call the delete handler for each selected subscription
-      selectedIds.forEach(id => {
-        if (onDeleteSubscription) {
-          onDeleteSubscription(id);
-        }
-      });
-      
-      // Clear selection
-      setSelectedSubscriptions(new Set());
+    // Call the delete handler with the array of selected IDs and names for bulk delete
+    if (onDeleteSubscription) {
+      onDeleteSubscription(selectedIds, selectedNames);
     }
+    
+    // Clear selection
+    setSelectedSubscriptions(new Set());
   };
 
   // Get unique categories for filter

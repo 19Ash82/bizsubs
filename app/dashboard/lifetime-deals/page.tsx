@@ -22,7 +22,7 @@ import {
 import { LifetimeDealsTable } from '@/components/dashboard/LifetimeDealsTable';
 import { AddLifetimeDealModal } from '@/components/dashboard/AddLifetimeDealModal';
 import { EditLifetimeDealModal } from '@/components/dashboard/EditLifetimeDealModal';
-import { useLifetimeDealsPortfolio, type LifetimeDeal } from '@/lib/react-query/lifetime-deals';
+import { useLifetimeDealsPortfolio, useDeleteLifetimeDeal, type LifetimeDeal } from '@/lib/react-query/lifetime-deals';
 import { createClient } from '@/lib/supabase/client';
 
 interface PortfolioMetricsProps {
@@ -135,11 +135,17 @@ export default function LifetimeDealsPage() {
   const [userRole, setUserRole] = useState<'admin' | 'member'>('admin');
   const [userCurrency, setUserCurrency] = useState('USD');
   const [userTaxRate, setUserTaxRate] = useState(30.0);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [lifetimeDealsToDelete, setLifetimeDealsToDelete] = useState<string[]>([]);
+  const [lifetimeDealNamesToDelete, setLifetimeDealNamesToDelete] = useState<string[]>([]);
   const [tableData, setTableData] = useState<{
     clients: any[];
     projects: any[];
     lifetimeDealCount: number;
   } | null>(null);
+
+  // React Query mutation for deleting lifetime deals
+  const deleteLifetimeDealMutation = useDeleteLifetimeDeal();
 
   // Portfolio data
   const { 
@@ -182,6 +188,44 @@ export default function LifetimeDealsPage() {
   const handleEditLifetimeDeal = (lifetimeDeal: LifetimeDeal) => {
     setSelectedLifetimeDeal(lifetimeDeal);
     setShowEditModal(true);
+  };
+
+  const handleDeleteLifetimeDeal = async (lifetimeDealId: string | string[], lifetimeDealNames?: string[]) => {
+    // Handle both single and bulk deletion
+    if (Array.isArray(lifetimeDealId)) {
+      // Bulk delete - show beautiful confirmation modal
+      setLifetimeDealsToDelete(lifetimeDealId);
+      setLifetimeDealNamesToDelete(lifetimeDealNames || []);
+      setShowBulkDeleteConfirm(true);
+    } else {
+      // Single delete - use React Query mutation
+      if (window.confirm('Are you sure you want to delete this lifetime deal?')) {
+        try {
+          await deleteLifetimeDealMutation.mutateAsync(lifetimeDealId);
+        } catch (error) {
+          // Error handling is done by the mutation
+          console.error('Error deleting lifetime deal:', error);
+        }
+      }
+    }
+  };
+
+  const confirmBulkDelete = async () => {
+    try {
+      // Use React Query mutations to delete each lifetime deal
+      // This ensures proper cache invalidation and optimistic updates
+      await Promise.all(
+        lifetimeDealsToDelete.map(id => deleteLifetimeDealMutation.mutateAsync(id))
+      );
+      
+    } catch (error) {
+      console.error('Error deleting lifetime deals:', error);
+      // Error handling is done by the mutations
+    } finally {
+      setShowBulkDeleteConfirm(false);
+      setLifetimeDealsToDelete([]);
+      setLifetimeDealNamesToDelete([]);
+    }
   };
 
   const handleDuplicateLifetimeDeal = (lifetimeDeal: LifetimeDeal) => {
@@ -280,6 +324,7 @@ export default function LifetimeDealsPage() {
             userTier={userTier}
             userRole={userRole}
             onEditLifetimeDeal={handleEditLifetimeDeal}
+            onDeleteLifetimeDeal={handleDeleteLifetimeDeal}
             onAddLifetimeDeal={handleAddLifetimeDeal}
             onDuplicateLifetimeDeal={handleDuplicateLifetimeDeal}
             onDataLoaded={handleDataLoaded}
@@ -308,6 +353,53 @@ export default function LifetimeDealsPage() {
         userCurrency={userCurrency}
         userTaxRate={userTaxRate}
       />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-red-600">Delete Lifetime Deals</CardTitle>
+              <p className="text-sm text-gray-600">
+                Are you sure you want to delete {lifetimeDealsToDelete.length} lifetime deal{lifetimeDealsToDelete.length > 1 ? 's' : ''}? This action cannot be undone.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {lifetimeDealNamesToDelete.length > 0 && (
+                <div className="max-h-32 overflow-y-auto">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Lifetime deals to delete:</p>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    {lifetimeDealNamesToDelete.map((name, index) => (
+                      <li key={index} className="flex items-center">
+                        <span className="w-2 h-2 bg-red-400 rounded-full mr-2 flex-shrink-0"></span>
+                        {name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowBulkDeleteConfirm(false);
+                    setLifetimeDealsToDelete([]);
+                    setLifetimeDealNamesToDelete([]);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmBulkDelete}
+                >
+                  Delete {lifetimeDealsToDelete.length} Deal{lifetimeDealsToDelete.length > 1 ? 's' : ''}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
