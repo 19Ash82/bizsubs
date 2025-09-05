@@ -24,7 +24,9 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Loader2, Plus, X } from 'lucide-react';
-import { calculateNextBillingDate, formatDateForInput, getDefaultStartDate, validateStartDate, formatDateForDisplay } from '@/lib/utils/billing-dates';
+import { calculateNextBillingDate, formatDateForInput, getDefaultStartDate, validateStartDate, formatDateForDisplay, validateDateFormat } from '@/lib/utils/billing-dates';
+import { DateInput } from '@/components/ui/date-input';
+import { useUpdateSubscription } from '@/lib/react-query/subscriptions';
 
 // Types
 interface Subscription {
@@ -151,6 +153,9 @@ export function EditSubscriptionModal({
   const [error, setError] = useState<string | null>(null);
   const [internalProjectName, setInternalProjectName] = useState("");
   const [calculatedNextBillingDate, setCalculatedNextBillingDate] = useState<string>("");
+  
+  // Use React Query mutation for proper cache invalidation
+  const updateSubscriptionMutation = useUpdateSubscription();
 
   // Initialize form with subscription data
   useEffect(() => {
@@ -178,7 +183,7 @@ export function EditSubscriptionModal({
         business_expense: subscription.business_expense,
         tax_deductible: subscription.tax_deductible,
         notes: notes,
-        tax_rate: (subscription.tax_rate || userTaxRate).toString(),
+        tax_rate: (subscription.tax_rate !== undefined ? subscription.tax_rate : userTaxRate).toString(),
         cancelled_date: subscription.cancelled_date || '',
       });
       
@@ -304,8 +309,6 @@ export function EditSubscriptionModal({
     setError(null);
 
     try {
-      const supabase = createClient();
-      
       // Handle client_id and notes for internal projects
       const isInternal = !formData.client_id || formData.client_id === 'internal';
       let finalNotes = formData.notes.trim();
@@ -321,6 +324,7 @@ export function EditSubscriptionModal({
       const nextBillingDate = calculateNextBillingDate(formData.start_date, formData.billing_cycle);
 
       const updateData = {
+        id: subscription.id,
         service_name: formData.service_name.trim(),
         cost: parseFloat(formData.cost),
         billing_cycle: formData.billing_cycle,
@@ -336,29 +340,11 @@ export function EditSubscriptionModal({
         notes: finalNotes || null,
         tax_rate: parseFloat(formData.tax_rate),
         cancelled_date: formData.cancelled_date || null,
-        updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase
-        .from('subscriptions')
-        .update(updateData)
-        .eq('id', subscription.id);
-
-      if (error) throw error;
-
-      // Log activity
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData.user) {
-        await supabase.from('activity_logs').insert({
-          user_id: userData.user.id,
-          user_email: userData.user.email!,
-          action_type: 'update',
-          resource_type: 'subscription',
-          resource_id: subscription.id,
-          description: `Updated subscription: ${formData.service_name}`,
-        });
-      }
-
+      // Use React Query mutation for proper cache invalidation
+      await updateSubscriptionMutation.mutateAsync(updateData);
+      
       onSuccess?.();
       onOpenChange(false);
     } catch (err) {
@@ -501,13 +487,16 @@ export function EditSubscriptionModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="start_date">Start Date *</Label>
-                <Input
+                <DateInput
                   id="start_date"
-                  type="date"
+                  label="Start Date"
                   value={formData.start_date}
-                  onChange={(e) => handleInputChange('start_date', e.target.value)}
+                  onChange={(value) => handleInputChange('start_date', value)}
                   disabled={loading}
+                  required={true}
+                  dateFormat="US"
+                  max={new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
+                  min={new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0]}
                 />
                 {calculatedNextBillingDate && (
                   <p className="text-sm text-muted-foreground mt-1">
@@ -543,16 +532,15 @@ export function EditSubscriptionModal({
             {/* Cancelled Date - Only show when status is cancelled or paused */}
             {(formData.status === 'cancelled' || formData.status === 'paused') && (
               <div className="space-y-2">
-                <Label htmlFor="cancelled_date">
-                  {formData.status === 'cancelled' ? 'Cancellation Date' : 'Pause Date'} *
-                </Label>
-                <Input
+                <DateInput
                   id="cancelled_date"
-                  type="date"
+                  label={formData.status === 'cancelled' ? 'Cancellation Date' : 'Pause Date'}
                   value={formData.cancelled_date}
-                  onChange={(e) => handleInputChange('cancelled_date', e.target.value)}
+                  onChange={(value) => handleInputChange('cancelled_date', value)}
                   disabled={loading}
-                  required
+                  required={true}
+                  dateFormat="US"
+                  max={new Date().toISOString().split('T')[0]}
                 />
                 <p className="text-sm text-gray-500">
                   {formData.status === 'cancelled' 

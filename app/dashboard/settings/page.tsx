@@ -12,6 +12,7 @@ import {
   WorkspaceSettingsTab,
   TeamSettingsTab,
   BillingSettingsTab,
+  PersonalPreferencesTab,
 } from "@/components/dashboard/settings";
 
 interface UserProfile {
@@ -30,6 +31,7 @@ export default function SettingsPage() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [preferences, setPreferences] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,6 +53,17 @@ export default function SettingsPage() {
             ...profileData,
             email: user.email || '',
           });
+
+          // Load user preferences
+          const { data: preferencesData } = await supabase
+            .from('user_preferences')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+
+          if (preferencesData) {
+            setPreferences(preferencesData);
+          }
         }
       } catch (error) {
         console.error('Error loading profile:', error);
@@ -89,6 +102,16 @@ export default function SettingsPage() {
       icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      ),
+      available: true,
+    },
+    {
+      id: 'preferences',
+      label: 'Preferences',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
         </svg>
       ),
       available: true,
@@ -139,6 +162,8 @@ export default function SettingsPage() {
         return <ProfileSettingsTab profile={profile} onUpdate={setProfile} />;
       case 'workspace':
         return <WorkspaceSettingsTab profile={profile} onUpdate={setProfile} isAdmin={isAdmin} />;
+      case 'preferences':
+        return <PersonalPreferencesTab preferences={preferences} onUpdate={setPreferences} />;
       case 'team':
         return isAdmin ? <TeamSettingsTab profile={profile} /> : null;
       case 'billing':

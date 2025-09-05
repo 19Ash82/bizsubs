@@ -29,7 +29,8 @@ import {
 } from "@/components/ui/select";
 import { Plus, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { calculateNextBillingDate, formatDateForInput, getDefaultStartDate, validateStartDate, formatDateForDisplay } from "@/lib/utils/billing-dates";
+import { calculateNextBillingDate, formatDateForInput, getDefaultStartDate, validateStartDate, formatDateForDisplay, validateDateFormat } from "@/lib/utils/billing-dates";
+import { DateInput } from "@/components/ui/date-input";
 
 // TypeScript interfaces
 interface Client {
@@ -429,18 +430,26 @@ export function AddSubscriptionModal({
 
               {/* Start Date */}
               <div>
-                <Label htmlFor="start_date">Start Date *</Label>
-                <Input
+                <DateInput
                   id="start_date"
-                  type="date"
-                  {...form.register("start_date")}
-                  className={form.formState.errors.start_date ? "border-red-500" : ""}
+                  label="Start Date"
+                  value={form.watch("start_date")}
+                  onChange={(value) => {
+                    form.setValue("start_date", value);
+                    // Validate the date format
+                    const validation = validateDateFormat(value);
+                    if (!validation.isValid && value) {
+                      form.setError("start_date", { message: validation.error });
+                    } else {
+                      form.clearErrors("start_date");
+                    }
+                  }}
+                  error={form.formState.errors.start_date?.message}
+                  required={true}
+                  dateFormat="US"
+                  max={new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
+                  min={new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0]}
                 />
-                {form.formState.errors.start_date && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {form.formState.errors.start_date.message}
-                  </p>
-                )}
                 {calculatedNextBillingDate && (
                   <p className="text-sm text-muted-foreground mt-1">
                     Next billing: {calculatedNextBillingDate}
@@ -496,7 +505,6 @@ export function AddSubscriptionModal({
                           {project.name}
                         </SelectItem>
                       ))}
-                      <SelectItem value="add_new_project">+ Add New Project</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

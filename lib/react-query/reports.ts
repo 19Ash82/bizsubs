@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { useSubscriptions } from './subscriptions';
 import { useLifetimeDeals } from './lifetime-deals';
-import { calculateProRatedAmount } from '@/lib/utils/billing-dates';
+import { calculateProRatedAmount, calculateAccumulatedCost } from '@/lib/utils/billing-dates';
 
 interface ReportFilters {
   dateRange: {
@@ -30,7 +30,7 @@ export function useMonthlyExpenseReport(filters: ReportFilters, userProfile: Use
   const { data: allLifetimeDeals = [], isLoading: lifetimeDealsLoading } = useLifetimeDeals();
 
   return useQuery({
-    queryKey: ['monthly-expense-report', filters, userProfile.id, allSubscriptions.length, allLifetimeDeals.length],
+    queryKey: ['monthly-expense-report', filters, userProfile.id, allSubscriptions, allLifetimeDeals],
     queryFn: async () => {
       console.log('Reports Debug - All subscriptions:', allSubscriptions.length);
       console.log('Reports Debug - All lifetime deals:', allLifetimeDeals.length);
@@ -92,7 +92,7 @@ export function useTaxYearSummary(filters: ReportFilters, userProfile: UserProfi
   const { data: allLifetimeDeals = [], isLoading: lifetimeDealsLoading } = useLifetimeDeals();
 
   return useQuery({
-    queryKey: ['tax-year-summary', filters, userProfile.id, allSubscriptions.length, allLifetimeDeals.length],
+    queryKey: ['tax-year-summary', filters, userProfile.id, allSubscriptions, allLifetimeDeals],
     queryFn: async () => {
       console.log('Tax Summary Debug - All subscriptions:', allSubscriptions.length);
       console.log('Tax Summary Debug - All lifetime deals:', allLifetimeDeals.length);
@@ -150,7 +150,7 @@ export function useClientCostReport(filters: ReportFilters, userProfile: UserPro
   const { data: allLifetimeDeals = [], isLoading: lifetimeDealsLoading } = useLifetimeDeals();
 
   return useQuery({
-    queryKey: ['client-cost-report', filters, userProfile.id, allSubscriptions.length, allLifetimeDeals.length],
+    queryKey: ['client-cost-report', filters, userProfile.id, allSubscriptions, allLifetimeDeals],
     queryFn: async () => {
       const supabase = createClient();
       
@@ -196,7 +196,7 @@ export function useCategoryBreakdown(filters: ReportFilters, userProfile: UserPr
   const { data: allLifetimeDeals = [], isLoading: lifetimeDealsLoading } = useLifetimeDeals();
 
   return useQuery({
-    queryKey: ['category-breakdown', filters, userProfile.id, allSubscriptions.length, allLifetimeDeals.length],
+    queryKey: ['category-breakdown', filters, userProfile.id, allSubscriptions, allLifetimeDeals],
     queryFn: async () => {
       // Filter subscriptions by date range
       const filteredSubscriptions = allSubscriptions.filter(sub => {
@@ -254,15 +254,31 @@ function calculateMonthlyTotals(subscriptions: any[], lifetimeDeals: any[], user
         monthlyData[monthKey] = { total: 0, taxDeductible: 0, taxSavings: 0, items: [] };
       }
       
-      // Use pro-rated calculation if start_date is available
+      // Use accumulated cost calculation if start_date is available
       let monthlyAmount;
       if (sub.start_date) {
-        monthlyAmount = calculateProRatedAmount(
+        // Calculate accumulated cost from start date to end of the month
+        const monthStart = new Date(monthKey + '-01');
+        const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0); // Last day of month
+        monthlyAmount = calculateAccumulatedCost(
           sub.cost,
           sub.start_date,
           sub.billing_cycle,
-          new Date(monthKey + '-01') // First day of the month
+          monthEnd
         );
+        
+        // If subscription started after this month, no cost for this month
+        const subscriptionStart = new Date(sub.start_date);
+        if (subscriptionStart > monthEnd) {
+          monthlyAmount = 0;
+        }
+        // If subscription started before this month, use the regular monthly conversion
+        else if (subscriptionStart < monthStart) {
+          monthlyAmount = sub.billing_cycle === 'monthly' ? sub.cost :
+                         sub.billing_cycle === 'annual' ? sub.cost / 12 :
+                         sub.billing_cycle === 'quarterly' ? sub.cost / 3 :
+                         sub.billing_cycle === 'weekly' ? sub.cost * 4.33 : sub.cost;
+        }
       } else {
         // Fallback to old calculation method
         monthlyAmount = sub.billing_cycle === 'monthly' ? sub.cost :
@@ -278,7 +294,8 @@ function calculateMonthlyTotals(subscriptions: any[], lifetimeDeals: any[], user
       if (sub.tax_deductible) {
         monthlyData[monthKey].taxDeductible += monthlyAmount;
         // Calculate tax savings using individual tax rate
-        const taxRate = sub.tax_rate || (userProfile?.tax_rate || 30);
+        // Important: if sub.tax_rate is 0, we should use 0, not the user's default
+        const taxRate = sub.tax_rate !== undefined ? sub.tax_rate : (userProfile?.tax_rate || 30);
         monthlyData[monthKey].taxSavings += monthlyAmount * (taxRate / 100);
       }
       
@@ -301,7 +318,8 @@ function calculateMonthlyTotals(subscriptions: any[], lifetimeDeals: any[], user
       if (deal.tax_deductible) {
         monthlyData[monthKey].taxDeductible += deal.original_cost;
         // Calculate tax savings using individual tax rate
-        const taxRate = deal.tax_rate || (userProfile?.tax_rate || 30);
+        // Important: if deal.tax_rate is 0, we should use 0, not the user's default
+        const taxRate = deal.tax_rate !== undefined ? deal.tax_rate : (userProfile?.tax_rate || 30);
         monthlyData[monthKey].taxSavings += deal.original_cost * (taxRate / 100);
       }
       
@@ -349,8 +367,8 @@ function calculateTaxSummary(subscriptions: any[], lifetimeDeals: any[], userPro
       
       // Only include if there's an overlap with the financial year
       if (effectiveStart <= effectiveEnd) {
-        // Calculate pro-rated amount for the financial year using the utility function
-        const proratedAmount = calculateProRatedAmount(
+        // Calculate accumulated cost for the financial year period
+        const accumulatedAmount = calculateAccumulatedCost(
           sub.cost,
           subscriptionStart,
           sub.billing_cycle,
@@ -362,7 +380,7 @@ function calculateTaxSummary(subscriptions: any[], lifetimeDeals: any[], userPro
         const activeDays = (effectiveEnd.getTime() - effectiveStart.getTime()) / (24 * 60 * 60 * 1000);
         const yearFraction = Math.min(1, activeDays / yearDays);
         
-        const finalAmount = proratedAmount * yearFraction;
+        const finalAmount = accumulatedAmount;
         
         // Always add to business expenses total
         totalBusinessExpenses += finalAmount;
@@ -372,7 +390,8 @@ function calculateTaxSummary(subscriptions: any[], lifetimeDeals: any[], userPro
           totalTaxDeductible += finalAmount;
           
           // Use individual tax rate from subscription, fallback to user's default
-          const taxRate = sub.tax_rate || userProfile.tax_rate;
+          // Important: if sub.tax_rate is 0, we should use 0, not the user's default
+          const taxRate = sub.tax_rate !== undefined ? sub.tax_rate : userProfile.tax_rate;
           const taxSaving = finalAmount * (taxRate / 100);
           totalTaxSavings += taxSaving;
           
@@ -413,7 +432,8 @@ function calculateTaxSummary(subscriptions: any[], lifetimeDeals: any[], userPro
           totalTaxDeductible += deal.original_cost;
           
           // Use individual tax rate from lifetime deal, fallback to user's default
-          const taxRate = deal.tax_rate || userProfile.tax_rate;
+          // Important: if deal.tax_rate is 0, we should use 0, not the user's default
+          const taxRate = deal.tax_rate !== undefined ? deal.tax_rate : userProfile.tax_rate;
           const taxSaving = deal.original_cost * (taxRate / 100);
           totalTaxSavings += taxSaving;
           

@@ -104,6 +104,28 @@ export function invalidateAfterSubscriptionChange(queryClient: QueryClient) {
     queryKey: clientKeys.all,
     exact: false
   });
+  
+  // Invalidate report queries that depend on subscription data
+  // These need explicit invalidation to update tax calculations immediately
+  queryClient.invalidateQueries({ 
+    queryKey: ['monthly-expense-report'],
+    exact: false
+  });
+  
+  queryClient.invalidateQueries({ 
+    queryKey: ['tax-year-summary'],
+    exact: false
+  });
+  
+  queryClient.invalidateQueries({ 
+    queryKey: ['client-cost-report'],
+    exact: false
+  });
+  
+  queryClient.invalidateQueries({ 
+    queryKey: ['category-breakdown'],
+    exact: false
+  });
 }
 
 /**
@@ -125,6 +147,28 @@ export function invalidateAfterLifetimeDealChange(queryClient: QueryClient) {
   // Invalidate client queries (for client cost updates)
   queryClient.invalidateQueries({ 
     queryKey: clientKeys.all,
+    exact: false
+  });
+  
+  // Invalidate report queries that depend on lifetime deal data
+  // These need explicit invalidation to update tax calculations immediately
+  queryClient.invalidateQueries({ 
+    queryKey: ['monthly-expense-report'],
+    exact: false
+  });
+  
+  queryClient.invalidateQueries({ 
+    queryKey: ['tax-year-summary'],
+    exact: false
+  });
+  
+  queryClient.invalidateQueries({ 
+    queryKey: ['client-cost-report'],
+    exact: false
+  });
+  
+  queryClient.invalidateQueries({ 
+    queryKey: ['category-breakdown'],
     exact: false
   });
 }

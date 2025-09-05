@@ -42,10 +42,50 @@ export function formatDateForInput(date: Date | string): string {
 }
 
 /**
- * Format date for display to users
+ * Format date for display to users with unambiguous format
+ * Uses month names to avoid MM/DD/YYYY vs DD/MM/YYYY confusion
+ * Always uses English locale to prevent French/other locale issues
  */
 export function formatDateForDisplay(date: Date | string): string {
   const d = new Date(date);
+  // Force English locale to prevent French dates (jj/mm/aa)
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+/**
+ * Format date for display with explicit locale preference
+ */
+export function formatDateForDisplayWithLocale(date: Date | string, locale?: string, dateFormat?: 'US' | 'EU' | 'ISO'): string {
+  const d = new Date(date);
+  
+  // Always force English locales to prevent French/other language dates
+  // Default to unambiguous format with month names
+  if (!dateFormat || dateFormat === 'US') {
+    return d.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+  
+  if (dateFormat === 'EU') {
+    // Use en-GB but still English language
+    return d.toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  }
+  
+  if (dateFormat === 'ISO') {
+    return d.toISOString().split('T')[0];
+  }
+  
+  // Fallback to unambiguous format in English
   return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -93,6 +133,7 @@ export function validateStartDate(startDate: string): { isValid: boolean; error?
 /**
  * Calculate pro-rated amount based on start date and billing cycle
  * Used for tax calculations when subscription doesn't start at the beginning of a period
+ * This calculates the partial period amount, not total accumulated cost
  */
 export function calculateProRatedAmount(
   fullAmount: number,
@@ -140,4 +181,71 @@ export function calculateProRatedAmount(
   // Calculate pro-rated amount
   const proRatedAmount = (daysSinceStart / periodDays) * fullAmount;
   return Math.max(0, proRatedAmount);
+}
+
+/**
+ * Calculate total accumulated subscription cost from start date to reference date
+ * This fixes the calculation bug where Aug 4 - Sep 20 should show ~$155 for $100/month
+ */
+export function calculateAccumulatedCost(
+  monthlyAmount: number,
+  startDate: string | Date,
+  billingCycle: 'weekly' | 'monthly' | 'quarterly' | 'annual',
+  endDate?: Date
+): number {
+  const start = new Date(startDate);
+  const end = endDate || new Date();
+  
+  // If start date is in the future, no cost accumulated yet
+  if (start > end) {
+    return 0;
+  }
+  
+  // Convert billing amount to monthly equivalent
+  let monthlyEquivalent: number;
+  switch (billingCycle) {
+    case 'weekly':
+      monthlyEquivalent = monthlyAmount * (30.44 / 7); // ~4.35 weeks per month
+      break;
+    case 'monthly':
+      monthlyEquivalent = monthlyAmount;
+      break;
+    case 'quarterly':
+      monthlyEquivalent = monthlyAmount / 3;
+      break;
+    case 'annual':
+      monthlyEquivalent = monthlyAmount / 12;
+      break;
+    default:
+      monthlyEquivalent = monthlyAmount;
+  }
+  
+  // Calculate total days between start and end
+  const totalDays = Math.floor((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+  
+  // Calculate accumulated cost based on days (using 30.44 average days per month)
+  const monthsEquivalent = totalDays / 30.44;
+  const accumulatedCost = monthsEquivalent * monthlyEquivalent;
+  
+  return Math.max(0, accumulatedCost);
+}
+
+/**
+ * Validate date input to prevent ambiguous date parsing
+ * Ensures dates are in YYYY-MM-DD format
+ */
+export function validateDateFormat(dateString: string): { isValid: boolean; error?: string; parsedDate?: Date } {
+  // Check if it's in ISO format (YYYY-MM-DD)
+  const isoRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!isoRegex.test(dateString)) {
+    return { isValid: false, error: 'Date must be in YYYY-MM-DD format' };
+  }
+  
+  const date = new Date(dateString + 'T00:00:00.000Z'); // Parse as UTC to avoid timezone issues
+  
+  if (isNaN(date.getTime())) {
+    return { isValid: false, error: 'Invalid date' };
+  }
+  
+  return { isValid: true, parsedDate: date };
 }

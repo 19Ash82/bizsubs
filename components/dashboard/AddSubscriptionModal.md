@@ -11,7 +11,7 @@ The `AddSubscriptionModal` component provides a comprehensive form for adding ne
 - **Billing Cycle** (required) - Dropdown: Weekly/Monthly/Quarterly/Annual
 - **Next Billing Date** (required) - Date picker with future date validation
 - **Client** (optional) - Dropdown with existing clients + "Add New Client" option
-- **Project** (optional) - Dropdown filtered by selected client + "Add New Project" option
+- **Project** (optional) - Dropdown filtered by selected client's projects only
 - **Category** (required) - Dropdown: Software/Marketing/Design/Infrastructure/Other
 - **Business Expense** (checkbox) - Default checked
 - **Tax Deductible** (checkbox) - Default checked

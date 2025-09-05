@@ -208,7 +208,7 @@ export function EditLifetimeDealModal({
       resold_price: lifetimeDeal.resold_price?.toString() || '',
       resold_date: lifetimeDeal.resold_date ? formatDateForInput(lifetimeDeal.resold_date) : '',
       notes: lifetimeDeal.notes || '',
-      tax_rate: (lifetimeDeal.tax_rate || userTaxRate).toString(),
+      tax_rate: (lifetimeDeal.tax_rate !== undefined ? lifetimeDeal.tax_rate : userTaxRate).toString(),
     });
 
     // Extract internal project name from notes if it exists

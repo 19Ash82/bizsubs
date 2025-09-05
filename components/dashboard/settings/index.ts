@@ -4,3 +4,4 @@ export { ProfileSettingsTab } from './ProfileSettingsTab';
 export { WorkspaceSettingsTab } from './WorkspaceSettingsTab';
 export { TeamSettingsTab } from './TeamSettingsTab';
 export { BillingSettingsTab } from './BillingSettingsTab';
+export { PersonalPreferencesTab } from './PersonalPreferencesTab';

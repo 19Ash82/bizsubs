@@ -316,7 +316,7 @@ export function TaxYearSummary({
                     <div className="text-right">
                       <div className="font-medium">{formatCurrency(deal.original_cost)}</div>
                       <div className="text-sm text-gray-500">
-                        {formatCurrency(deal.original_cost * ((deal.tax_rate || userProfile.tax_rate) / 100))} tax savings
+                        {formatCurrency(deal.original_cost * ((deal.tax_rate !== undefined ? deal.tax_rate : userProfile.tax_rate) / 100))} tax savings
                       </div>
                     </div>
                   </div>
