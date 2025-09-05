@@ -24,6 +24,7 @@ import { AddLifetimeDealModal } from '@/components/dashboard/AddLifetimeDealModa
 import { EditLifetimeDealModal } from '@/components/dashboard/EditLifetimeDealModal';
 import { useLifetimeDealsPortfolio, useDeleteLifetimeDeal, type LifetimeDeal } from '@/lib/react-query/lifetime-deals';
 import { createClient } from '@/lib/supabase/client';
+import { useUserPreferences } from '@/lib/react-query/user-preferences';
 
 interface PortfolioMetricsProps {
   totalInvested: number;
@@ -143,6 +144,9 @@ export default function LifetimeDealsPage() {
     projects: any[];
     lifetimeDealCount: number;
   } | null>(null);
+
+  // Load user preferences for date format
+  const { data: userPreferences } = useUserPreferences();
 
   // React Query mutation for deleting lifetime deals
   const deleteLifetimeDealMutation = useDeleteLifetimeDeal();
@@ -323,6 +327,7 @@ export default function LifetimeDealsPage() {
             key={tableData?.lifetimeDealCount} // Force re-render when count changes
             userTier={userTier}
             userRole={userRole}
+            userDateFormat={userPreferences?.date_format_preference || 'US'}
             onEditLifetimeDeal={handleEditLifetimeDeal}
             onDeleteLifetimeDeal={handleDeleteLifetimeDeal}
             onAddLifetimeDeal={handleAddLifetimeDeal}
@@ -340,6 +345,7 @@ export default function LifetimeDealsPage() {
         userTier={userTier}
         userCurrency={userCurrency}
         userTaxRate={userTaxRate}
+        userDateFormat={userPreferences?.date_format_preference || 'US'}
         preloadedClients={tableData?.clients}
         preloadedProjects={tableData?.projects}
         preloadedLifetimeDealCount={tableData?.lifetimeDealCount}
@@ -352,6 +358,7 @@ export default function LifetimeDealsPage() {
         onSuccess={handleEditSuccess}
         userCurrency={userCurrency}
         userTaxRate={userTaxRate}
+        userDateFormat={userPreferences?.date_format_preference || 'US'}
       />
 
       {/* Bulk Delete Confirmation Dialog */}

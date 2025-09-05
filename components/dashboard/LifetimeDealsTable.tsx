@@ -51,6 +51,7 @@ import {
   TrendingDown
 } from 'lucide-react';
 import { useLifetimeDeals, useDeleteLifetimeDeal, type LifetimeDeal } from '@/lib/react-query/lifetime-deals';
+import { formatDateForDisplayWithLocale } from '@/lib/utils/billing-dates';
 import { useClients } from '@/lib/react-query/clients';
 import { useProjectsWithCosts } from '@/lib/react-query/projects';
 
@@ -61,6 +62,7 @@ type SortDirection = 'asc' | 'desc';
 interface LifetimeDealsTableProps {
   userTier?: 'free' | 'pro' | 'team';
   userRole?: 'admin' | 'member';
+  userDateFormat?: 'US' | 'EU' | 'ISO';
   onEditLifetimeDeal?: (lifetimeDeal: LifetimeDeal) => void;
   onDeleteLifetimeDeal?: (id: string | string[], lifetimeDealNames?: string[]) => void;
   onAddLifetimeDeal?: () => void;
@@ -257,7 +259,7 @@ const MobileLifetimeDealCard = ({
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-gray-500" />
             <span className="text-sm">
-              Purchased: {new Date(lifetimeDeal.purchase_date).toLocaleDateString()}
+              Purchased: {formatDateForDisplayWithLocale(lifetimeDeal.purchase_date, 'en-US', userDateFormat)}
             </span>
           </div>
 
@@ -265,7 +267,7 @@ const MobileLifetimeDealCard = ({
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-gray-500" />
               <span className="text-sm">
-                Resold: {new Date(lifetimeDeal.resold_date).toLocaleDateString()}
+                Resold: {formatDateForDisplayWithLocale(lifetimeDeal.resold_date, 'en-US', userDateFormat)}
                 {lifetimeDeal.resold_price && (
                   <span className="ml-2 font-medium">
                     for {formatCurrency(lifetimeDeal.resold_price, lifetimeDeal.currency)}
@@ -314,6 +316,7 @@ const MobileLifetimeDealCard = ({
 export function LifetimeDealsTable({
   userTier = 'free',
   userRole = 'admin',
+  userDateFormat = 'US',
   onEditLifetimeDeal,
   onDeleteLifetimeDeal,
   onAddLifetimeDeal,
@@ -723,7 +726,7 @@ export function LifetimeDealsTable({
                         {formatCurrency(lifetimeDeal.original_cost, lifetimeDeal.currency)}
                       </TableCell>
                       <TableCell>
-                        {new Date(lifetimeDeal.purchase_date).toLocaleDateString()}
+                        {formatDateForDisplayWithLocale(lifetimeDeal.purchase_date, 'en-US', userDateFormat)}
                       </TableCell>
                       <TableCell>
                         {lifetimeDeal.status === 'resold' && lifetimeDeal.resold_price 

@@ -68,6 +68,7 @@ interface EditSubscriptionModalProps {
   onSuccess?: () => void;
   userTaxRate?: number;
   userCurrency?: string;
+  userDateFormat?: 'US' | 'EU' | 'ISO';
 }
 
 interface SubscriptionFormData {
@@ -127,7 +128,8 @@ export function EditSubscriptionModal({
   subscription,
   onSuccess,
   userTaxRate = 30.0,
-  userCurrency = 'USD'
+  userCurrency = 'USD',
+  userDateFormat = 'US'
 }: EditSubscriptionModalProps) {
   const [formData, setFormData] = useState<SubscriptionFormData>({
     service_name: '',
@@ -494,7 +496,7 @@ export function EditSubscriptionModal({
                   onChange={(value) => handleInputChange('start_date', value)}
                   disabled={loading}
                   required={true}
-                  dateFormat="US"
+                  dateFormat={userDateFormat}
                   max={new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
                   min={new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0]}
                 />
@@ -539,7 +541,7 @@ export function EditSubscriptionModal({
                   onChange={(value) => handleInputChange('cancelled_date', value)}
                   disabled={loading}
                   required={true}
-                  dateFormat="US"
+                  dateFormat={userDateFormat}
                   max={new Date().toISOString().split('T')[0]}
                 />
                 <p className="text-sm text-gray-500">

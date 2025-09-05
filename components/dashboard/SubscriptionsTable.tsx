@@ -48,6 +48,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { formatDateForDisplayWithLocale } from '@/lib/utils/billing-dates';
 
 // Types
 interface Subscription {
@@ -155,13 +156,9 @@ const formatCurrency = (amount: number, currency: string = 'USD') => {
   }).format(amount);
 };
 
-// Format date
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
+// Format date - now uses user preference
+const formatDate = (dateString: string, dateFormat: 'US' | 'EU' | 'ISO' = 'US') => {
+  return formatDateForDisplayWithLocale(dateString, 'en-US', dateFormat);
 };
 
 // Extract internal project name from notes
@@ -297,7 +294,8 @@ const MobileSubscriptionCard = ({
   onEdit, 
   onDelete, 
   onDuplicate,
-  userRole = 'admin' 
+  userRole = 'admin',
+  userDateFormat = 'US'
 }: {
   subscription: Subscription;
   isSelected: boolean;
@@ -306,6 +304,7 @@ const MobileSubscriptionCard = ({
   onDelete: (subscriptionId: string) => void;
   onDuplicate: (subscription: Subscription) => void;
   userRole?: 'admin' | 'member';
+  userDateFormat?: 'US' | 'EU' | 'ISO';
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const daysUntil = getDaysUntilPayment(subscription.next_billing_date);
@@ -437,7 +436,7 @@ const MobileSubscriptionCard = ({
               <span className="text-gray-500">Next Payment</span>
               <div className="text-right">
                 <div className="font-medium text-gray-900">
-                  {formatDate(subscription.next_billing_date)}
+                  {formatDate(subscription.next_billing_date, userDateFormat)}
                 </div>
                 <div className={cn("text-xs", 
                   daysUntil <= 7 ? "text-amber-600" : "text-gray-500"
@@ -453,9 +452,21 @@ const MobileSubscriptionCard = ({
   );
 };
 
+interface SubscriptionsTableProps {
+  userTier?: 'free' | 'pro' | 'team';
+  userRole?: 'admin' | 'member';
+  userDateFormat?: 'US' | 'EU' | 'ISO';
+  onEditSubscription?: (subscription: Subscription) => void;
+  onDeleteSubscription?: (id: string) => void;
+  onAddSubscription?: () => void;
+  onDuplicateSubscription?: (subscription: Subscription) => void;
+  onDataLoaded?: (data: { clients: any[], projects: any[], subscriptionCount: number }) => void;
+}
+
 export function SubscriptionsTable({
   userTier = 'free',
   userRole = 'admin',
+  userDateFormat = 'US',
   onEditSubscription,
   onDeleteSubscription,
   onAddSubscription,
@@ -845,6 +856,7 @@ export function SubscriptionsTable({
               onDelete={onDeleteSubscription || (() => {})}
               onDuplicate={onDuplicateSubscription || (() => {})}
               userRole={userRole}
+              userDateFormat={userDateFormat}
             />
           ))}
         </div>
@@ -1149,7 +1161,7 @@ export function SubscriptionsTable({
                       <TableCell>
                         <div>
                           <div className="text-sm font-medium">
-                            {formatDate(subscription.next_billing_date)}
+                            {formatDate(subscription.next_billing_date, userDateFormat)}
                           </div>
                           <div className={cn("text-xs", 
                             daysUntil <= 7 ? "text-amber-600" : "text-gray-500"

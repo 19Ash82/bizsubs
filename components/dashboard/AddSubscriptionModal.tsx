@@ -91,6 +91,7 @@ interface AddSubscriptionModalProps {
   userTier?: string;
   userCurrency?: string;
   userTaxRate?: number;
+  userDateFormat?: 'US' | 'EU' | 'ISO';
   preloadedClients?: Array<{ id: string; name: string; color_hex: string; status: string }>;
   preloadedProjects?: Array<{ id: string; name: string; client_id: string }>;
   preloadedSubscriptionCount?: number;
@@ -103,6 +104,7 @@ export function AddSubscriptionModal({
   userTier = 'free',
   userCurrency = 'USD',
   userTaxRate = 30.0,
+  userDateFormat = 'US',
   preloadedClients,
   preloadedProjects,
   preloadedSubscriptionCount
@@ -446,7 +448,7 @@ export function AddSubscriptionModal({
                   }}
                   error={form.formState.errors.start_date?.message}
                   required={true}
-                  dateFormat="US"
+                  dateFormat={userDateFormat}
                   max={new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
                   min={new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0]}
                 />

@@ -32,6 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Loader2, Plus, X, TrendingUp, TrendingDown } from "lucide-react";
 import { useCreateLifetimeDeal, type CreateLifetimeDealData } from "@/lib/react-query/lifetime-deals";
+import { DateInput } from "@/components/ui/date-input";
 
 // Types
 interface Client {
@@ -55,6 +56,7 @@ interface AddLifetimeDealModalProps {
   userTier?: 'free' | 'pro' | 'team';
   userCurrency?: string;
   userTaxRate?: number;
+  userDateFormat?: 'US' | 'EU' | 'ISO';
   preloadedClients?: Client[];
   preloadedProjects?: Project[];
   preloadedLifetimeDealCount?: number;
@@ -121,6 +123,7 @@ export function AddLifetimeDealModal({
   userTier = 'free',
   userCurrency = 'USD',
   userTaxRate = 30.0,
+  userDateFormat = 'US',
   preloadedClients,
   preloadedProjects,
   preloadedLifetimeDealCount
@@ -406,17 +409,17 @@ export function AddLifetimeDealModal({
           {/* Purchase Date and Status */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="purchase_date">Purchase Date *</Label>
-              <Input
+              <DateInput
                 id="purchase_date"
-                type="date"
-                {...form.register("purchase_date")}
+                label="Purchase Date"
+                value={form.watch("purchase_date")}
+                onChange={(value) => form.setValue("purchase_date", value)}
+                error={form.formState.errors.purchase_date?.message}
+                required={true}
+                dateFormat={userDateFormat}
                 max={new Date().toISOString().split('T')[0]}
                 disabled={isLoading}
               />
-              {form.formState.errors.purchase_date && (
-                <p className="text-sm text-red-600">{form.formState.errors.purchase_date.message}</p>
-              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="status">Status *</Label>
@@ -488,17 +491,17 @@ export function AddLifetimeDealModal({
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="resold_date">Resold Date *</Label>
-                    <Input
+                    <DateInput
                       id="resold_date"
-                      type="date"
-                      {...form.register("resold_date")}
+                      label="Resold Date"
+                      value={form.watch("resold_date")}
+                      onChange={(value) => form.setValue("resold_date", value)}
+                      error={form.formState.errors.resold_date?.message}
+                      required={true}
+                      dateFormat={userDateFormat}
                       max={new Date().toISOString().split('T')[0]}
                       disabled={isLoading}
                     />
-                    {form.formState.errors.resold_date && (
-                      <p className="text-sm text-red-600">{form.formState.errors.resold_date.message}</p>
-                    )}
                   </div>
                 </div>
               )}

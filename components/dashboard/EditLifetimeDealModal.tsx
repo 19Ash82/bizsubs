@@ -27,6 +27,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Loader2, Plus, X, TrendingUp, TrendingDown } from 'lucide-react';
 import { useUpdateLifetimeDeal, type LifetimeDeal, type UpdateLifetimeDealData } from '@/lib/react-query/lifetime-deals';
+import { DateInput } from '@/components/ui/date-input';
 import { createClient } from '@/lib/supabase/client';
 
 // Types
@@ -51,6 +52,7 @@ interface EditLifetimeDealModalProps {
   onSuccess?: () => void;
   userCurrency?: string;
   userTaxRate?: number;
+  userDateFormat?: 'US' | 'EU' | 'ISO';
 }
 
 interface LifetimeDealFormData {
@@ -102,7 +104,8 @@ export function EditLifetimeDealModal({
   lifetimeDeal,
   onSuccess,
   userCurrency = 'USD',
-  userTaxRate = 30.0
+  userTaxRate = 30.0,
+  userDateFormat = 'US'
 }: EditLifetimeDealModalProps) {
   
   const [clients, setClients] = useState<Client[]>([]);
@@ -435,14 +438,15 @@ export function EditLifetimeDealModal({
           {/* Purchase Date and Status */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="purchase_date">Purchase Date *</Label>
-              <Input
+              <DateInput
                 id="purchase_date"
-                type="date"
+                label="Purchase Date"
                 value={formData.purchase_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, purchase_date: e.target.value }))}
+                onChange={(value) => setFormData(prev => ({ ...prev, purchase_date: value }))}
                 disabled={isLoading}
-                required
+                required={true}
+                dateFormat={userDateFormat}
+                max={new Date().toISOString().split('T')[0]}
               />
             </div>
             <div className="space-y-2">
@@ -514,14 +518,15 @@ export function EditLifetimeDealModal({
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="resold_date">Resold Date *</Label>
-                    <Input
+                    <DateInput
                       id="resold_date"
-                      type="date"
+                      label="Resold Date"
                       value={formData.resold_date}
-                      onChange={(e) => setFormData(prev => ({ ...prev, resold_date: e.target.value }))}
+                      onChange={(value) => setFormData(prev => ({ ...prev, resold_date: value }))}
                       disabled={isLoading}
                       required={formData.status === 'resold'}
+                      dateFormat={userDateFormat}
+                      max={new Date().toISOString().split('T')[0]}
                     />
                   </div>
                 </div>

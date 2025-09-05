@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Plus, DollarSign, TrendingUp, Calendar, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { useUserPreferences } from '@/lib/react-query/user-preferences';
 
 interface UserProfile {
   id: string;
@@ -83,6 +84,9 @@ export function SubscriptionsPageClient({ profile, userRole }: SubscriptionsPage
     projects: Array<{ id: string; name: string; client_id: string }>;
     subscriptionCount: number;
   } | null>(null);
+
+  // Load user preferences for date format
+  const { data: userPreferences } = useUserPreferences();
 
   // Currency formatting helper
   const formatCurrency = (amount: number, currency: string = profile.currency_preference) => {
@@ -519,6 +523,7 @@ export function SubscriptionsPageClient({ profile, userRole }: SubscriptionsPage
             key={refreshKey} // Force refresh when key changes
             userTier={profile.subscription_tier}
             userRole={userRole}
+            userDateFormat={userPreferences?.date_format_preference || 'US'}
             onEditSubscription={handleEditSubscription}
             onDeleteSubscription={handleDeleteSubscription}
             onAddSubscription={handleAddSubscription}
@@ -535,6 +540,7 @@ export function SubscriptionsPageClient({ profile, userRole }: SubscriptionsPage
           userTier={profile.subscription_tier}
           userCurrency={profile.currency_preference}
           userTaxRate={profile.tax_rate}
+          userDateFormat={userPreferences?.date_format_preference || 'US'}
           preloadedClients={tableData?.clients}
           preloadedProjects={tableData?.projects}
           preloadedSubscriptionCount={tableData?.subscriptionCount}
@@ -548,6 +554,7 @@ export function SubscriptionsPageClient({ profile, userRole }: SubscriptionsPage
           onSuccess={handleModalSuccess}
           userTaxRate={profile.tax_rate}
           userCurrency={profile.currency_preference}
+          userDateFormat={userPreferences?.date_format_preference || 'US'}
         />
 
         {/* Delete Confirmation Dialog */}
