@@ -290,6 +290,12 @@ export function EditLifetimeDealModal({
           : `Internal Project: ${internalProjectName.trim()}`;
       }
 
+      console.log('🔍 FORM DATA BEFORE UPDATE:', {
+        formData_client_id: formData.client_id,
+        isInternal,
+        clients
+      });
+
       const updateData: UpdateLifetimeDealData = {
         id: lifetimeDeal.id,
         service_name: formData.service_name.trim(),
@@ -298,7 +304,7 @@ export function EditLifetimeDealModal({
         category: formData.category,
         status: formData.status,
         currency: formData.currency,
-        client_id: isInternal ? undefined : formData.client_id,
+        client_id: isInternal ? null : formData.client_id,
         project_id: (formData.project_id && formData.project_id !== 'none') ? formData.project_id : undefined,
         business_expense: formData.business_expense,
         tax_deductible: formData.tax_deductible,
@@ -307,6 +313,12 @@ export function EditLifetimeDealModal({
         notes: finalNotes || undefined,
         tax_rate: parseFloat(formData.tax_rate),
       };
+
+      console.log('🔍 UPDATE DATA TO SEND:', {
+        updateData,
+        client_id: updateData.client_id,
+        client_id_type: typeof updateData.client_id
+      });
 
       // Use React Query mutation with optimistic updates
       await updateLifetimeDealMutation.mutateAsync(updateData);

@@ -20,3 +20,6 @@ export { SubscriptionsTableDemo } from './SubscriptionsTableDemo';
 export { LifetimeDealsTable } from './LifetimeDealsTable';
 export { AddLifetimeDealModal } from './AddLifetimeDealModal';
 export { EditLifetimeDealModal } from './EditLifetimeDealModal';
+export { ClientsTable } from './ClientsTable';
+export { AddClientModal } from './AddClientModal';
+export { EditClientModal } from './EditClientModal';

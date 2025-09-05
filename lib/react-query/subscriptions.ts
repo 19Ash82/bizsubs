@@ -4,6 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { clientKeys } from './clients';
+import { invalidateAfterSubscriptionChange } from './invalidation-utils';
 
 // Types
 export interface Subscription {
@@ -199,8 +201,8 @@ export function useCreateSubscription() {
       toast.success('Subscription created successfully');
     },
     onSettled: () => {
-      // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: subscriptionKeys.lists() });
+      // Use comprehensive invalidation strategy for subscription changes
+      invalidateAfterSubscriptionChange(queryClient);
     },
   });
 }
@@ -276,6 +278,10 @@ export function useUpdateSubscription() {
     onSettled: () => {
       // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: subscriptionKeys.lists() });
+      // Invalidate client cost data since subscription update affects client costs
+      queryClient.invalidateQueries({ queryKey: clientKeys.costs() });
+      // Also invalidate the broader client keys to catch all variations
+      queryClient.invalidateQueries({ queryKey: clientKeys.all });
     },
   });
 }
@@ -339,6 +345,10 @@ export function useDeleteSubscription() {
     onSettled: () => {
       // Always refetch after error or success
       queryClient.invalidateQueries({ queryKey: subscriptionKeys.lists() });
+      // Invalidate client cost data since subscription deletion affects client costs
+      queryClient.invalidateQueries({ queryKey: clientKeys.costs() });
+      // Also invalidate the broader client keys to catch all variations
+      queryClient.invalidateQueries({ queryKey: clientKeys.all });
     },
   });
 }

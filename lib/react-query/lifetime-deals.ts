@@ -4,6 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { clientKeys } from './clients';
+import { invalidateAfterLifetimeDealChange } from './invalidation-utils';
 
 // Types
 export interface LifetimeDeal {
@@ -42,8 +44,8 @@ export interface CreateLifetimeDealData {
   category: string;
   status: 'active' | 'resold' | 'shutdown';
   currency: string;
-  client_id?: string;
-  project_id?: string;
+  client_id?: string | null;
+  project_id?: string | null;
   business_expense: boolean;
   tax_deductible: boolean;
   resold_price?: number;
@@ -246,9 +248,12 @@ export function useCreateLifetimeDeal() {
       toast.success('Lifetime deal created successfully');
     },
     onSettled: () => {
-      // Always refetch after error or success
+      // Always refetch after error or success (same as subscriptions)
       queryClient.invalidateQueries({ queryKey: lifetimeDealKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: lifetimeDealKeys.portfolio() });
+      // Invalidate client cost data since lifetime deal creation affects client costs
+      queryClient.invalidateQueries({ queryKey: clientKeys.costs() });
+      // Also invalidate the broader client keys to catch all variations
+      queryClient.invalidateQueries({ queryKey: clientKeys.all });
     },
   });
 }
@@ -259,6 +264,12 @@ export function useUpdateLifetimeDeal() {
 
   return useMutation({
     mutationFn: async (data: UpdateLifetimeDealData): Promise<LifetimeDeal> => {
+      console.log('🔍 LIFETIME DEAL UPDATE REQUEST:', {
+        originalData: data,
+        client_id: data.client_id,
+        client_id_type: typeof data.client_id
+      });
+
       const supabase = createClient();
 
       const { id, ...updateData } = data;
@@ -266,6 +277,13 @@ export function useUpdateLifetimeDeal() {
         ...updateData,
         updated_at: new Date().toISOString(),
       };
+
+      console.log('🔍 SUPABASE UPDATE PAYLOAD:', {
+        id,
+        finalUpdateData,
+        client_id: finalUpdateData.client_id,
+        client_id_type: typeof finalUpdateData.client_id
+      });
 
       const { data: updatedLifetimeDeal, error } = await supabase
         .from('lifetime_deals')
@@ -278,7 +296,17 @@ export function useUpdateLifetimeDeal() {
         `)
         .single();
 
-      if (error) throw error;
+      console.log('🔍 SUPABASE UPDATE RESPONSE:', {
+        updatedLifetimeDeal,
+        client_id: updatedLifetimeDeal?.client_id,
+        clients: updatedLifetimeDeal?.clients,
+        error
+      });
+
+      if (error) {
+        console.error('❌ SUPABASE UPDATE ERROR:', error);
+        throw error;
+      }
 
       // Log activity
       await logActivity('update', id, `Updated lifetime deal: ${data.service_name}`);
@@ -298,12 +326,7 @@ export function useUpdateLifetimeDeal() {
         
         return old.map(lifetimeDeal => 
           lifetimeDeal.id === updatedLifetimeDeal.id
-            ? { 
-                ...lifetimeDeal, 
-                ...updatedLifetimeDeal, 
-                profit_loss: updatedLifetimeDeal.resold_price ? updatedLifetimeDeal.resold_price - updatedLifetimeDeal.original_cost : undefined,
-                updated_at: new Date().toISOString() 
-              }
+            ? { ...lifetimeDeal, ...updatedLifetimeDeal, updated_at: new Date().toISOString() }
             : lifetimeDeal
         );
       });
@@ -327,9 +350,12 @@ export function useUpdateLifetimeDeal() {
       toast.success('Lifetime deal updated successfully');
     },
     onSettled: () => {
-      // Always refetch after error or success
+      // Always refetch after error or success (same as subscriptions)
       queryClient.invalidateQueries({ queryKey: lifetimeDealKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: lifetimeDealKeys.portfolio() });
+      // Invalidate client cost data since lifetime deal update affects client costs
+      queryClient.invalidateQueries({ queryKey: clientKeys.costs() });
+      // Also invalidate the broader client keys to catch all variations
+      queryClient.invalidateQueries({ queryKey: clientKeys.all });
     },
   });
 }
@@ -391,9 +417,12 @@ export function useDeleteLifetimeDeal() {
       toast.success('Lifetime deal deleted successfully');
     },
     onSettled: () => {
-      // Always refetch after error or success
+      // Always refetch after error or success (same as subscriptions)
       queryClient.invalidateQueries({ queryKey: lifetimeDealKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: lifetimeDealKeys.portfolio() });
+      // Invalidate client cost data since lifetime deal deletion affects client costs
+      queryClient.invalidateQueries({ queryKey: clientKeys.costs() });
+      // Also invalidate the broader client keys to catch all variations
+      queryClient.invalidateQueries({ queryKey: clientKeys.all });
     },
   });
 }
