@@ -55,6 +55,7 @@ interface Subscription {
   service_name: string;
   cost: number;
   billing_cycle: 'weekly' | 'monthly' | 'quarterly' | 'annual';
+  start_date: string;
   next_billing_date: string;
   category: string;
   status: 'active' | 'cancelled' | 'paused';

@@ -14,7 +14,8 @@ import {
   Download,
   Receipt,
   Calculator,
-  PieChart
+  PieChart,
+  AlertTriangle
 } from "lucide-react";
 import { useTaxYearSummary } from "@/lib/react-query/reports";
 
@@ -150,7 +151,7 @@ export function TaxYearSummary({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tax Deductible Amount</CardTitle>
+            <CardTitle className="text-sm font-medium">Expenses Marked as Potentially Deductible</CardTitle>
             <Receipt className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -158,14 +159,14 @@ export function TaxYearSummary({
               {formatCurrency(taxSummary.totalTaxDeductible)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {((taxSummary.totalTaxDeductible / taxSummary.totalBusinessExpenses) * 100).toFixed(1)}% of total expenses
+              {((taxSummary.totalTaxDeductible / taxSummary.totalBusinessExpenses) * 100).toFixed(1)}% of business expenses
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estimated Tax Savings</CardTitle>
+            <CardTitle className="text-sm font-medium">Potential Tax Impact (Estimate Only)</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -173,7 +174,7 @@ export function TaxYearSummary({
               {formatCurrency(taxSummary.totalTaxSavings)}
             </div>
             <p className="text-xs text-muted-foreground">
-              At {taxSummary.averageTaxRate?.toFixed(1)}% average rate
+              If deductible at {taxSummary.averageTaxRate?.toFixed(1)}% rate
             </p>
           </CardContent>
         </Card>
@@ -224,7 +225,7 @@ export function TaxYearSummary({
             Category Breakdown
           </CardTitle>
           <CardDescription>
-            Tax deductible expenses by category
+            Business expense categorization for tax preparation
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -253,12 +254,33 @@ export function TaxYearSummary({
                                       <div className="text-right">
                       <div className="font-medium">{formatCurrency(amount)}</div>
                       <div className="text-sm text-gray-500">
-                        Tax savings calculated per item
+                        If deductible: potential impact
                       </div>
                     </div>
                 </div>
               ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Tax Disclaimer */}
+      <Card className="border-amber-200 bg-amber-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-amber-800">
+            <AlertTriangle className="h-5 w-5" />
+            Important Tax Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-amber-700 space-y-2">
+          <p>
+            <strong>These figures are estimates only - consult a tax professional.</strong>
+          </p>
+          <p>
+            Actual deductibility depends on your specific tax situation, local tax laws, and current regulations.
+          </p>
+          <p>
+            This software provides expense tracking only and does not constitute tax advice.
+          </p>
         </CardContent>
       </Card>
 

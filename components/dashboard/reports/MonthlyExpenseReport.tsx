@@ -12,7 +12,8 @@ import {
   FileText,
   Download,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle
 } from "lucide-react";
 import { useState } from "react";
 import { useMonthlyExpenseReport } from "@/lib/react-query/reports";
@@ -119,7 +120,7 @@ export function MonthlyExpenseReport({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Business Expenses</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -127,14 +128,14 @@ export function MonthlyExpenseReport({
               {formatCurrency(reportData.totalExpenses)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {reportData.monthlyTotals.length} months
+              All business-related expenses
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tax Deductible</CardTitle>
+            <CardTitle className="text-sm font-medium">Potentially Deductible</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -142,14 +143,14 @@ export function MonthlyExpenseReport({
               {formatCurrency(reportData.totalTaxDeductible)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {((reportData.totalTaxDeductible / reportData.totalExpenses) * 100).toFixed(1)}% of total
+              {((reportData.totalTaxDeductible / reportData.totalExpenses) * 100).toFixed(1)}% of business expenses
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tax Savings</CardTitle>
+            <CardTitle className="text-sm font-medium">Potential Tax Impact</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -157,7 +158,7 @@ export function MonthlyExpenseReport({
               {formatCurrency(reportData.totalTaxSavings || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Based on individual tax rates
+              If deductible (estimate only)
             </p>
           </CardContent>
         </Card>
@@ -261,6 +262,27 @@ export function MonthlyExpenseReport({
               );
             })}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Tax Disclaimer */}
+      <Card className="border-amber-200 bg-amber-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-amber-800">
+            <AlertTriangle className="h-5 w-5" />
+            Important Tax Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-amber-700 space-y-2">
+          <p>
+            <strong>These figures are estimates only - consult a tax professional.</strong>
+          </p>
+          <p>
+            Actual deductibility depends on your specific tax situation, local tax laws, and current regulations.
+          </p>
+          <p>
+            This software provides expense tracking only and does not constitute tax advice.
+          </p>
         </CardContent>
       </Card>
 

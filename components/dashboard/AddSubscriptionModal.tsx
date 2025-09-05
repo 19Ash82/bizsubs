@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { calculateNextBillingDate, formatDateForInput, getDefaultStartDate, validateStartDate, formatDateForDisplay } from "@/lib/utils/billing-dates";
 
 // TypeScript interfaces
 interface Client {
@@ -50,7 +51,7 @@ interface SubscriptionFormData {
   service_name: string;
   cost: number;
   billing_cycle: "weekly" | "monthly" | "quarterly" | "annual";
-  next_billing_date: string;
+  start_date: string;
   client_id?: string;
   project_id?: string;
   category: "software" | "marketing" | "design" | "infrastructure" | "other";
@@ -67,12 +68,10 @@ const subscriptionSchema = z.object({
   service_name: z.string().min(1, "Service name is required").max(100, "Service name must be less than 100 characters"),
   cost: z.number().positive("Cost must be a positive number").min(0.01, "Minimum cost is $0.01"),
   billing_cycle: z.enum(["weekly", "monthly", "quarterly", "annual"]),
-  next_billing_date: z.string().min(1, "Next billing date is required").refine((date) => {
-    const selectedDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return selectedDate >= today;
-  }, "Next billing date must be today or in the future"),
+  start_date: z.string().min(1, "Start date is required").refine((date) => {
+    const validation = validateStartDate(date);
+    return validation.isValid;
+  }, "Invalid start date"),
   client_id: z.string().optional(),
   project_id: z.string().optional(),
   category: z.enum(["software", "marketing", "design", "infrastructure", "other"]),
@@ -114,6 +113,7 @@ export function AddSubscriptionModal({
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [subscriptionCount, setSubscriptionCount] = useState(0);
   const [internalProjectName, setInternalProjectName] = useState("");
+  const [calculatedNextBillingDate, setCalculatedNextBillingDate] = useState<string>("");
 
   const form = useForm<SubscriptionFormData>({
     resolver: zodResolver(subscriptionSchema),
@@ -121,7 +121,7 @@ export function AddSubscriptionModal({
       service_name: "",
       cost: 0,
       billing_cycle: "monthly",
-      next_billing_date: "",
+      start_date: getDefaultStartDate(),
       client_id: undefined,
       project_id: undefined,
       category: "software",
@@ -135,6 +135,22 @@ export function AddSubscriptionModal({
   });
 
   const watchedClientId = form.watch("client_id");
+  const watchedStartDate = form.watch("start_date");
+  const watchedBillingCycle = form.watch("billing_cycle");
+
+  // Auto-calculate next billing date when start date or billing cycle changes
+  useEffect(() => {
+    if (watchedStartDate && watchedBillingCycle) {
+      try {
+        const nextDate = calculateNextBillingDate(watchedStartDate, watchedBillingCycle);
+        setCalculatedNextBillingDate(formatDateForDisplay(nextDate));
+      } catch (error) {
+        setCalculatedNextBillingDate("");
+      }
+    } else {
+      setCalculatedNextBillingDate("");
+    }
+  }, [watchedStartDate, watchedBillingCycle]);
 
   // Load initial data when modal opens
   useEffect(() => {
@@ -234,13 +250,17 @@ export function AddSubscriptionModal({
         return;
       }
 
+      // Calculate next billing date from start date
+      const nextBillingDate = calculateNextBillingDate(data.start_date, data.billing_cycle);
+
       // Prepare subscription data
       const subscriptionData = {
         user_id: user.id,
         service_name: data.service_name.trim(),
         cost: data.cost,
         billing_cycle: data.billing_cycle,
-        next_billing_date: data.next_billing_date,
+        start_date: data.start_date,
+        next_billing_date: formatDateForInput(nextBillingDate),
         client_id: data.client_id || null,
         project_id: data.project_id || null,
         category: data.category,
@@ -407,18 +427,23 @@ export function AddSubscriptionModal({
                 )}
               </div>
 
-              {/* Next Billing Date */}
+              {/* Start Date */}
               <div>
-                <Label htmlFor="next_billing_date">Next Billing Date *</Label>
+                <Label htmlFor="start_date">Start Date *</Label>
                 <Input
-                  id="next_billing_date"
+                  id="start_date"
                   type="date"
-                  {...form.register("next_billing_date")}
-                  className={form.formState.errors.next_billing_date ? "border-red-500" : ""}
+                  {...form.register("start_date")}
+                  className={form.formState.errors.start_date ? "border-red-500" : ""}
                 />
-                {form.formState.errors.next_billing_date && (
+                {form.formState.errors.start_date && (
                   <p className="text-sm text-red-600 mt-1">
-                    {form.formState.errors.next_billing_date.message}
+                    {form.formState.errors.start_date.message}
+                  </p>
+                )}
+                {calculatedNextBillingDate && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Next billing: {calculatedNextBillingDate}
                   </p>
                 )}
               </div>

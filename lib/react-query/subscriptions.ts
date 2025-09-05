@@ -14,6 +14,7 @@ export interface Subscription {
   service_name: string;
   cost: number;
   billing_cycle: 'weekly' | 'monthly' | 'quarterly' | 'annual';
+  start_date: string;
   next_billing_date: string;
   category: string;
   status: 'active' | 'cancelled' | 'paused';
@@ -40,7 +41,8 @@ export interface CreateSubscriptionData {
   service_name: string;
   cost: number;
   billing_cycle: 'weekly' | 'monthly' | 'quarterly' | 'annual';
-  next_billing_date: string;
+  start_date: string;
+  next_billing_date?: string; // Optional since it will be auto-calculated
   category: string;
   status: 'active' | 'cancelled' | 'paused';
   currency: string;

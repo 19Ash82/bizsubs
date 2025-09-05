@@ -49,12 +49,12 @@ const REPORT_TYPES = [
   {
     id: "monthly",
     title: "Monthly Expense Report",
-    description: "Detailed breakdown of monthly business expenses with tax categorization",
+    description: "Detailed breakdown of monthly business expenses for tax preparation",
     icon: Calendar,
     color: "bg-blue-500",
     features: [
       "Monthly expense breakdown",
-      "Tax deductible amounts",
+      "Expenses marked as potentially deductible",
       "Business vs personal categorization",
       "Billing cycle analysis"
     ],
@@ -63,13 +63,13 @@ const REPORT_TYPES = [
   {
     id: "tax",
     title: "Tax Year Summary",
-    description: "Annual tax summary based on your financial year settings",
+    description: "Annual expense summary for tax preparation based on your financial year",
     icon: FileText,
     color: "bg-green-500",
     features: [
       "Financial year calculations",
-      "Total deductible amounts",
-      "Tax savings calculations",
+      "Expenses marked as potentially deductible",
+      "Potential tax impact estimates",
       "Category-wise breakdown"
     ],
     exportFormats: ["csv", "pdf"]

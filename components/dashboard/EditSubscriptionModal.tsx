@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Loader2, Plus, X } from 'lucide-react';
+import { calculateNextBillingDate, formatDateForInput, getDefaultStartDate, validateStartDate, formatDateForDisplay } from '@/lib/utils/billing-dates';
 
 // Types
 interface Subscription {
@@ -31,6 +32,7 @@ interface Subscription {
   service_name: string;
   cost: number;
   billing_cycle: 'weekly' | 'monthly' | 'quarterly' | 'annual';
+  start_date: string;
   next_billing_date: string;
   category: string;
   status: 'active' | 'cancelled' | 'paused';
@@ -70,6 +72,7 @@ interface SubscriptionFormData {
   service_name: string;
   cost: string;
   billing_cycle: 'weekly' | 'monthly' | 'quarterly' | 'annual';
+  start_date: string;
   next_billing_date: string;
   category: string;
   status: 'active' | 'cancelled' | 'paused';
@@ -128,6 +131,7 @@ export function EditSubscriptionModal({
     service_name: '',
     cost: '',
     billing_cycle: 'monthly',
+    start_date: '',
     next_billing_date: '',
     category: 'software',
     status: 'active',
@@ -146,6 +150,7 @@ export function EditSubscriptionModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [internalProjectName, setInternalProjectName] = useState("");
+  const [calculatedNextBillingDate, setCalculatedNextBillingDate] = useState<string>("");
 
   // Initialize form with subscription data
   useEffect(() => {
@@ -163,6 +168,7 @@ export function EditSubscriptionModal({
         service_name: subscription.service_name,
         cost: subscription.cost.toString(),
         billing_cycle: subscription.billing_cycle,
+        start_date: subscription.start_date || '',
         next_billing_date: subscription.next_billing_date,
         category: subscription.category,
         status: subscription.status,
@@ -232,6 +238,22 @@ export function EditSubscriptionModal({
     // Note: We no longer clear project_id when client changes since projects can be assigned regardless of client
   }, [formData.client_id]);
 
+  // Auto-calculate next billing date when start date or billing cycle changes
+  useEffect(() => {
+    if (formData.start_date && formData.billing_cycle) {
+      try {
+        const nextDate = calculateNextBillingDate(formData.start_date, formData.billing_cycle);
+        setCalculatedNextBillingDate(formatDateForDisplay(nextDate));
+        // Update the next_billing_date in form data
+        setFormData(prev => ({ ...prev, next_billing_date: formatDateForInput(nextDate) }));
+      } catch (error) {
+        setCalculatedNextBillingDate("");
+      }
+    } else {
+      setCalculatedNextBillingDate("");
+    }
+  }, [formData.start_date, formData.billing_cycle]);
+
   const handleInputChange = (field: keyof SubscriptionFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setError(null);
@@ -253,7 +275,11 @@ export function EditSubscriptionModal({
     if (!formData.cost || isNaN(parseFloat(formData.cost)) || parseFloat(formData.cost) <= 0) {
       return 'Valid cost is required';
     }
-    if (!formData.next_billing_date) return 'Next billing date is required';
+    if (!formData.start_date) return 'Start date is required';
+    const startDateValidation = validateStartDate(formData.start_date);
+    if (!startDateValidation.isValid) {
+      return startDateValidation.error || 'Invalid start date';
+    }
     if (!formData.tax_rate || isNaN(parseFloat(formData.tax_rate)) || parseFloat(formData.tax_rate) < 0) {
       return 'Valid tax rate is required';
     }
@@ -291,11 +317,15 @@ export function EditSubscriptionModal({
           : `Internal Project: ${internalProjectName.trim()}`;
       }
 
+      // Calculate next billing date from start date
+      const nextBillingDate = calculateNextBillingDate(formData.start_date, formData.billing_cycle);
+
       const updateData = {
         service_name: formData.service_name.trim(),
         cost: parseFloat(formData.cost),
         billing_cycle: formData.billing_cycle,
-        next_billing_date: formData.next_billing_date,
+        start_date: formData.start_date,
+        next_billing_date: formatDateForInput(nextBillingDate),
         category: formData.category,
         status: formData.status,
         currency: formData.currency,
@@ -471,14 +501,19 @@ export function EditSubscriptionModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="next_billing_date">Next Billing Date *</Label>
+                <Label htmlFor="start_date">Start Date *</Label>
                 <Input
-                  id="next_billing_date"
+                  id="start_date"
                   type="date"
-                  value={formData.next_billing_date}
-                  onChange={(e) => handleInputChange('next_billing_date', e.target.value)}
+                  value={formData.start_date}
+                  onChange={(e) => handleInputChange('start_date', e.target.value)}
                   disabled={loading}
                 />
+                {calculatedNextBillingDate && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Next billing: {calculatedNextBillingDate}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { useSubscriptions } from './subscriptions';
 import { useLifetimeDeals } from './lifetime-deals';
+import { calculateProRatedAmount } from '@/lib/utils/billing-dates';
 
 interface ReportFilters {
   dateRange: {
@@ -243,41 +244,67 @@ export function useCategoryBreakdown(filters: ReportFilters, userProfile: UserPr
 function calculateMonthlyTotals(subscriptions: any[], lifetimeDeals: any[], userProfile?: UserProfile) {
   const monthlyData: { [key: string]: { total: number; taxDeductible: number; taxSavings: number; items: any[] } } = {};
   
-  // Process subscriptions - only include if business expense and tax deductible
+  // Process subscriptions - include all business expenses
   subscriptions.forEach(sub => {
-    if (sub.business_expense && sub.tax_deductible) {
-      const monthKey = new Date(sub.next_billing_date).toISOString().substring(0, 7);
+    if (sub.business_expense) {
+      // Use start_date if available, otherwise fall back to next_billing_date for the month key
+      const dateForMonth = sub.start_date || sub.next_billing_date;
+      const monthKey = new Date(dateForMonth).toISOString().substring(0, 7);
       if (!monthlyData[monthKey]) {
         monthlyData[monthKey] = { total: 0, taxDeductible: 0, taxSavings: 0, items: [] };
       }
       
-      const monthlyAmount = sub.billing_cycle === 'monthly' ? sub.cost :
-                           sub.billing_cycle === 'annual' ? sub.cost / 12 :
-                           sub.billing_cycle === 'quarterly' ? sub.cost / 3 :
-                           sub.billing_cycle === 'weekly' ? sub.cost * 4.33 : sub.cost;
+      // Use pro-rated calculation if start_date is available
+      let monthlyAmount;
+      if (sub.start_date) {
+        monthlyAmount = calculateProRatedAmount(
+          sub.cost,
+          sub.start_date,
+          sub.billing_cycle,
+          new Date(monthKey + '-01') // First day of the month
+        );
+      } else {
+        // Fallback to old calculation method
+        monthlyAmount = sub.billing_cycle === 'monthly' ? sub.cost :
+                       sub.billing_cycle === 'annual' ? sub.cost / 12 :
+                       sub.billing_cycle === 'quarterly' ? sub.cost / 3 :
+                       sub.billing_cycle === 'weekly' ? sub.cost * 4.33 : sub.cost;
+      }
       
+      // Always add to total business expenses
       monthlyData[monthKey].total += monthlyAmount;
-      monthlyData[monthKey].taxDeductible += monthlyAmount;
-      // Calculate tax savings using individual tax rate
-      const taxRate = sub.tax_rate || (userProfile?.tax_rate || 30);
-      monthlyData[monthKey].taxSavings += monthlyAmount * (taxRate / 100);
+      
+      // Only add to tax deductible if marked as such
+      if (sub.tax_deductible) {
+        monthlyData[monthKey].taxDeductible += monthlyAmount;
+        // Calculate tax savings using individual tax rate
+        const taxRate = sub.tax_rate || (userProfile?.tax_rate || 30);
+        monthlyData[monthKey].taxSavings += monthlyAmount * (taxRate / 100);
+      }
+      
       monthlyData[monthKey].items.push({ ...sub, calculatedAmount: monthlyAmount });
     }
   });
   
-  // Process lifetime deals - only include if business expense, tax deductible, and purchased in the month
+  // Process lifetime deals - include all business expenses purchased in the month
   lifetimeDeals.forEach(deal => {
-    if (deal.business_expense && deal.tax_deductible) {
+    if (deal.business_expense) {
       const monthKey = new Date(deal.purchase_date).toISOString().substring(0, 7);
       if (!monthlyData[monthKey]) {
         monthlyData[monthKey] = { total: 0, taxDeductible: 0, taxSavings: 0, items: [] };
       }
       
+      // Always add to total business expenses
       monthlyData[monthKey].total += deal.original_cost;
-      monthlyData[monthKey].taxDeductible += deal.original_cost;
-      // Calculate tax savings using individual tax rate
-      const taxRate = deal.tax_rate || (userProfile?.tax_rate || 30);
-      monthlyData[monthKey].taxSavings += deal.original_cost * (taxRate / 100);
+      
+      // Only add to tax deductible if marked as such
+      if (deal.tax_deductible) {
+        monthlyData[monthKey].taxDeductible += deal.original_cost;
+        // Calculate tax savings using individual tax rate
+        const taxRate = deal.tax_rate || (userProfile?.tax_rate || 30);
+        monthlyData[monthKey].taxSavings += deal.original_cost * (taxRate / 100);
+      }
+      
       monthlyData[monthKey].items.push({ ...deal, calculatedAmount: deal.original_cost });
     }
   });
@@ -310,9 +337,10 @@ function calculateTaxSummary(subscriptions: any[], lifetimeDeals: any[], userPro
       cancelled_date: sub.cancelled_date
     });
     
-    if (sub.business_expense && sub.tax_deductible) {
-      // Calculate the active period within the financial year
-      const subscriptionStart = new Date(sub.created_at);
+    // Only process business expenses
+    if (sub.business_expense) {
+      // Use start_date if available, otherwise fall back to created_at
+      const subscriptionStart = sub.start_date ? new Date(sub.start_date) : new Date(sub.created_at);
       const subscriptionEnd = sub.cancelled_date ? new Date(sub.cancelled_date) : new Date(); // If not cancelled, use current date
       
       // Determine the overlap with financial year
@@ -321,47 +349,46 @@ function calculateTaxSummary(subscriptions: any[], lifetimeDeals: any[], userPro
       
       // Only include if there's an overlap with the financial year
       if (effectiveStart <= effectiveEnd) {
-        // Calculate months active within financial year
-        const monthsInYear = (effectiveEnd.getTime() - effectiveStart.getTime()) / (1000 * 60 * 60 * 24 * 30.44); // Average days per month
-        const monthsActive = Math.max(0, Math.min(12, monthsInYear));
+        // Calculate pro-rated amount for the financial year using the utility function
+        const proratedAmount = calculateProRatedAmount(
+          sub.cost,
+          subscriptionStart,
+          sub.billing_cycle,
+          effectiveEnd
+        );
         
-        // Calculate pro-rated amount based on billing cycle
-        let monthlyAmount = 0;
-        switch (sub.billing_cycle) {
-          case 'monthly':
-            monthlyAmount = sub.cost;
-            break;
-          case 'quarterly':
-            monthlyAmount = sub.cost / 3;
-            break;
-          case 'annual':
-            monthlyAmount = sub.cost / 12;
-            break;
-          case 'weekly':
-            monthlyAmount = sub.cost * 4.33; // Average weeks per month
-            break;
-          default:
-            monthlyAmount = sub.cost; // Default to monthly
+        // Adjust for partial year if subscription started mid-year
+        const yearDays = (financialYearEnd.getTime() - financialYearStart.getTime()) / (24 * 60 * 60 * 1000);
+        const activeDays = (effectiveEnd.getTime() - effectiveStart.getTime()) / (24 * 60 * 60 * 1000);
+        const yearFraction = Math.min(1, activeDays / yearDays);
+        
+        const finalAmount = proratedAmount * yearFraction;
+        
+        // Always add to business expenses total
+        totalBusinessExpenses += finalAmount;
+        
+        // Only add to tax deductible if also marked as tax deductible
+        if (sub.tax_deductible) {
+          totalTaxDeductible += finalAmount;
+          
+          // Use individual tax rate from subscription, fallback to user's default
+          const taxRate = sub.tax_rate || userProfile.tax_rate;
+          const taxSaving = finalAmount * (taxRate / 100);
+          totalTaxSavings += taxSaving;
+          
+          console.log(`calculateTaxSummary - Potentially deductible subscription: ${finalAmount.toFixed(2)} at ${taxRate}% = ${taxSaving.toFixed(2)} potential impact`);
+        } else {
+          console.log(`calculateTaxSummary - Business expense (not marked as deductible): ${finalAmount.toFixed(2)}`);
         }
-        
-        const proratedAmount = monthlyAmount * monthsActive;
-        
-        totalBusinessExpenses += proratedAmount;
-        totalTaxDeductible += proratedAmount;
-        
-        // Use individual tax rate from subscription, fallback to user's default
-        const taxRate = sub.tax_rate || userProfile.tax_rate;
-        const taxSaving = proratedAmount * (taxRate / 100);
-        totalTaxSavings += taxSaving;
-        
-        console.log(`calculateTaxSummary - Subscription active ${monthsActive.toFixed(1)} months, pro-rated: ${proratedAmount.toFixed(2)} at ${taxRate}% = ${taxSaving.toFixed(2)} tax savings`);
       } else {
         console.log(`calculateTaxSummary - Subscription not active during financial year`);
       }
+    } else {
+      console.log(`calculateTaxSummary - Personal expense excluded: ${sub.service_name}`);
     }
   });
   
-  // Process lifetime deals - only include if purchased within financial year
+  // Process lifetime deals - only include business expenses purchased within financial year
   lifetimeDeals.forEach((deal, index) => {
     console.log(`calculateTaxSummary - Lifetime Deal ${index}:`, {
       service_name: deal.service_name,
@@ -372,23 +399,33 @@ function calculateTaxSummary(subscriptions: any[], lifetimeDeals: any[], userPro
       purchase_date: deal.purchase_date
     });
     
-    if (deal.business_expense && deal.tax_deductible) {
+    // Only process business expenses
+    if (deal.business_expense) {
       const purchaseDate = new Date(deal.purchase_date);
       
       // Only include if purchased within the financial year
       if (purchaseDate >= financialYearStart && purchaseDate <= financialYearEnd) {
+        // Always add to business expenses total
         totalBusinessExpenses += deal.original_cost;
-        totalTaxDeductible += deal.original_cost;
         
-        // Use individual tax rate from lifetime deal, fallback to user's default
-        const taxRate = deal.tax_rate || userProfile.tax_rate;
-        const taxSaving = deal.original_cost * (taxRate / 100);
-        totalTaxSavings += taxSaving;
-        
-        console.log(`calculateTaxSummary - Lifetime deal purchased in financial year: ${deal.original_cost} at ${taxRate}% = ${taxSaving} tax savings`);
+        // Only add to tax deductible if also marked as tax deductible
+        if (deal.tax_deductible) {
+          totalTaxDeductible += deal.original_cost;
+          
+          // Use individual tax rate from lifetime deal, fallback to user's default
+          const taxRate = deal.tax_rate || userProfile.tax_rate;
+          const taxSaving = deal.original_cost * (taxRate / 100);
+          totalTaxSavings += taxSaving;
+          
+          console.log(`calculateTaxSummary - Potentially deductible lifetime deal: ${deal.original_cost} at ${taxRate}% = ${taxSaving} potential impact`);
+        } else {
+          console.log(`calculateTaxSummary - Business expense lifetime deal (not marked as deductible): ${deal.original_cost}`);
+        }
       } else {
         console.log(`calculateTaxSummary - Lifetime deal purchased outside financial year, excluded`);
       }
+    } else {
+      console.log(`calculateTaxSummary - Personal lifetime deal excluded: ${deal.service_name}`);
     }
   });
   
@@ -405,14 +442,15 @@ function calculateTaxSummary(subscriptions: any[], lifetimeDeals: any[], userPro
 
 function calculateClientCosts(clients: any[], subscriptions: any[], lifetimeDeals: any[]) {
   return clients.map(client => {
-    const clientSubscriptions = subscriptions.filter(sub => sub.client_id === client.id);
-    const clientLifetimeDeals = lifetimeDeals.filter(deal => deal.client_id === client.id);
+    // Filter for business expenses only
+    const clientSubscriptions = subscriptions.filter(sub => sub.client_id === client.id && sub.business_expense);
+    const clientLifetimeDeals = lifetimeDeals.filter(deal => deal.client_id === client.id && deal.business_expense);
     
     let totalCost = 0;
     let subscriptionCost = 0;
     let lifetimeDealCost = 0;
     
-    // Calculate subscription costs
+    // Calculate subscription costs - business expenses only
     clientSubscriptions.forEach(sub => {
       const annualAmount = sub.billing_cycle === 'annual' ? sub.cost :
                           sub.billing_cycle === 'monthly' ? sub.cost * 12 :
@@ -421,7 +459,7 @@ function calculateClientCosts(clients: any[], subscriptions: any[], lifetimeDeal
       subscriptionCost += annualAmount;
     });
     
-    // Calculate lifetime deal costs
+    // Calculate lifetime deal costs - business expenses only
     clientLifetimeDeals.forEach(deal => {
       lifetimeDealCost += deal.original_cost;
     });
@@ -442,33 +480,37 @@ function calculateClientCosts(clients: any[], subscriptions: any[], lifetimeDeal
 function calculateCategoryBreakdown(subscriptions: any[], lifetimeDeals: any[]) {
   const categories: { [key: string]: { total: number; count: number; items: any[] } } = {};
   
-  // Process subscriptions
+  // Process subscriptions - only include business expenses
   subscriptions.forEach(sub => {
-    const category = sub.category || 'other';
-    if (!categories[category]) {
-      categories[category] = { total: 0, count: 0, items: [] };
+    if (sub.business_expense) {
+      const category = sub.category || 'other';
+      if (!categories[category]) {
+        categories[category] = { total: 0, count: 0, items: [] };
+      }
+      
+      const annualAmount = sub.billing_cycle === 'annual' ? sub.cost :
+                          sub.billing_cycle === 'monthly' ? sub.cost * 12 :
+                          sub.billing_cycle === 'quarterly' ? sub.cost * 4 :
+                          sub.billing_cycle === 'weekly' ? sub.cost * 52 : sub.cost * 12;
+      
+      categories[category].total += annualAmount;
+      categories[category].count += 1;
+      categories[category].items.push({ ...sub, calculatedAmount: annualAmount });
     }
-    
-    const annualAmount = sub.billing_cycle === 'annual' ? sub.cost :
-                        sub.billing_cycle === 'monthly' ? sub.cost * 12 :
-                        sub.billing_cycle === 'quarterly' ? sub.cost * 4 :
-                        sub.billing_cycle === 'weekly' ? sub.cost * 52 : sub.cost * 12;
-    
-    categories[category].total += annualAmount;
-    categories[category].count += 1;
-    categories[category].items.push({ ...sub, calculatedAmount: annualAmount });
   });
   
-  // Process lifetime deals
+  // Process lifetime deals - only include business expenses
   lifetimeDeals.forEach(deal => {
-    const category = deal.category || 'other';
-    if (!categories[category]) {
-      categories[category] = { total: 0, count: 0, items: [] };
+    if (deal.business_expense) {
+      const category = deal.category || 'other';
+      if (!categories[category]) {
+        categories[category] = { total: 0, count: 0, items: [] };
+      }
+      
+      categories[category].total += deal.original_cost;
+      categories[category].count += 1;
+      categories[category].items.push({ ...deal, calculatedAmount: deal.original_cost });
     }
-    
-    categories[category].total += deal.original_cost;
-    categories[category].count += 1;
-    categories[category].items.push({ ...deal, calculatedAmount: deal.original_cost });
   });
   
   return Object.entries(categories)

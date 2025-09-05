@@ -15,7 +15,8 @@ import {
   FileText,
   PieChart,
   BarChart3,
-  Target
+  Target,
+  AlertTriangle
 } from "lucide-react";
 import { useCategoryBreakdown } from "@/lib/react-query/reports";
 
@@ -124,7 +125,7 @@ export function CategoryBreakdown({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Business Expenses</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -132,7 +133,7 @@ export function CategoryBreakdown({
               {formatCurrency(totalExpenses)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Across {categoryBreakdown.length} categories
+              Business expenses across {categoryBreakdown.length} categories
             </p>
           </CardContent>
         </Card>
@@ -369,6 +370,25 @@ export function CategoryBreakdown({
               );
             })}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Tax Disclaimer */}
+      <Card className="border-amber-200 bg-amber-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-amber-800">
+            <AlertTriangle className="h-5 w-5" />
+            Important Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-amber-700 space-y-2">
+          <p>
+            <strong>These figures are estimates only - consult a tax professional.</strong>
+          </p>
+          <p>
+            Business expense categorization for tax preparation purposes only.
+            This software provides expense tracking and does not constitute tax advice.
+          </p>
         </CardContent>
       </Card>
 
