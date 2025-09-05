@@ -24,8 +24,8 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Loader2, Plus, X } from 'lucide-react';
-import { calculateNextBillingDate, formatDateForInput, getDefaultStartDate, validateStartDate, formatDateForDisplay, validateDateFormat } from '@/lib/utils/billing-dates';
-import { DateInput } from '@/components/ui/date-input';
+import { calculateNextBillingDate, formatDateForInput, getDefaultStartDate, validateStartDate, formatDateForDisplayWithLocale, validateDateFormat } from '@/lib/utils/billing-dates';
+import { CustomDateInput } from '@/components/ui/custom-date-input';
 import { useUpdateSubscription } from '@/lib/react-query/subscriptions';
 
 // Types
@@ -250,7 +250,7 @@ export function EditSubscriptionModal({
     if (formData.start_date && formData.billing_cycle) {
       try {
         const nextDate = calculateNextBillingDate(formData.start_date, formData.billing_cycle);
-        setCalculatedNextBillingDate(formatDateForDisplay(nextDate));
+        setCalculatedNextBillingDate(formatDateForDisplayWithLocale(nextDate, 'en-US', userDateFormat));
         // Update the next_billing_date in form data
         setFormData(prev => ({ ...prev, next_billing_date: formatDateForInput(nextDate) }));
       } catch (error) {
@@ -489,7 +489,7 @@ export function EditSubscriptionModal({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <DateInput
+                <CustomDateInput
                   id="start_date"
                   label="Start Date"
                   value={formData.start_date}
@@ -534,7 +534,7 @@ export function EditSubscriptionModal({
             {/* Cancelled Date - Only show when status is cancelled or paused */}
             {(formData.status === 'cancelled' || formData.status === 'paused') && (
               <div className="space-y-2">
-                <DateInput
+                <CustomDateInput
                   id="cancelled_date"
                   label={formData.status === 'cancelled' ? 'Cancellation Date' : 'Pause Date'}
                   value={formData.cancelled_date}

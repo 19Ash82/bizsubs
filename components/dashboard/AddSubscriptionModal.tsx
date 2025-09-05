@@ -29,8 +29,8 @@ import {
 } from "@/components/ui/select";
 import { Plus, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { calculateNextBillingDate, formatDateForInput, getDefaultStartDate, validateStartDate, formatDateForDisplay, validateDateFormat } from "@/lib/utils/billing-dates";
-import { DateInput } from "@/components/ui/date-input";
+import { calculateNextBillingDate, formatDateForInput, getDefaultStartDate, validateStartDate, formatDateForDisplayWithLocale, validateDateFormat } from "@/lib/utils/billing-dates";
+import { CustomDateInput } from "@/components/ui/custom-date-input";
 
 // TypeScript interfaces
 interface Client {
@@ -146,7 +146,7 @@ export function AddSubscriptionModal({
     if (watchedStartDate && watchedBillingCycle) {
       try {
         const nextDate = calculateNextBillingDate(watchedStartDate, watchedBillingCycle);
-        setCalculatedNextBillingDate(formatDateForDisplay(nextDate));
+        setCalculatedNextBillingDate(formatDateForDisplayWithLocale(nextDate, 'en-US', userDateFormat));
       } catch (error) {
         setCalculatedNextBillingDate("");
       }
@@ -432,7 +432,7 @@ export function AddSubscriptionModal({
 
               {/* Start Date */}
               <div>
-                <DateInput
+                <CustomDateInput
                   id="start_date"
                   label="Start Date"
                   value={form.watch("start_date")}

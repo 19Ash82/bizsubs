@@ -58,17 +58,49 @@ export function useUpdateUserPreferences() {
     mutationFn: async (preferences: Partial<UserPreferences> & { user_id: string }) => {
       const supabase = createClient();
       
-      const { data, error } = await supabase
+      console.log('Attempting to update preferences:', preferences);
+      
+      // First try to update existing record
+      let { data, error } = await supabase
         .from('user_preferences')
-        .upsert(preferences, { onConflict: 'user_id' })
+        .update(preferences)
+        .eq('user_id', preferences.user_id)
         .select()
         .single();
 
-      if (error) throw error;
+      // If no record exists, insert a new one
+      if (error && error.code === 'PGRST116') {
+        console.log('No existing record found, inserting new one...');
+        const insertResult = await supabase
+          .from('user_preferences')
+          .insert(preferences)
+          .select()
+          .single();
+        
+        data = insertResult.data;
+        error = insertResult.error;
+      }
+
+      if (error) {
+        console.error('Supabase error:', error);
+        console.error('Full error object:', JSON.stringify(error, null, 2));
+        console.error('Error properties:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw error;
+      }
+      
+      console.log('Successfully updated preferences:', data);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-preferences'] });
+    },
+    onError: (error) => {
+      console.error('Mutation error:', error);
     },
   });
 }

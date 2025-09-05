@@ -48,7 +48,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { formatDateForDisplayWithLocale } from '@/lib/utils/billing-dates';
+import { formatDateForDisplayWithLocale, calculateNextBillingDate } from '@/lib/utils/billing-dates';
 
 // Types
 interface Subscription {
@@ -214,11 +214,16 @@ const ClientDisplay = ({
   );
 };
 
+// Get the correct next billing date (calculated dynamically)
+const getCorrectNextBillingDate = (subscription: Subscription): Date => {
+  return calculateNextBillingDate(subscription.start_date, subscription.billing_cycle);
+};
+
 // Calculate days until next payment
-const getDaysUntilPayment = (nextBillingDate: string) => {
+const getDaysUntilPayment = (subscription: Subscription) => {
   const today = new Date();
-  const billing = new Date(nextBillingDate);
-  const diffTime = billing.getTime() - today.getTime();
+  const nextBilling = getCorrectNextBillingDate(subscription);
+  const diffTime = nextBilling.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
 };
@@ -307,7 +312,8 @@ const MobileSubscriptionCard = ({
   userDateFormat?: 'US' | 'EU' | 'ISO';
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const daysUntil = getDaysUntilPayment(subscription.next_billing_date);
+  const daysUntil = getDaysUntilPayment(subscription);
+  const correctNextBillingDate = getCorrectNextBillingDate(subscription);
   
   return (
     <div className={cn(
@@ -436,7 +442,7 @@ const MobileSubscriptionCard = ({
               <span className="text-gray-500">Next Payment</span>
               <div className="text-right">
                 <div className="font-medium text-gray-900">
-                  {formatDate(subscription.next_billing_date, userDateFormat)}
+                  {formatDateForDisplayWithLocale(correctNextBillingDate, 'en-US', userDateFormat)}
                 </div>
                 <div className={cn("text-xs", 
                   daysUntil <= 7 ? "text-amber-600" : "text-gray-500"
@@ -1104,7 +1110,8 @@ export function SubscriptionsTable({
               </TableHeader>
               <TableBody>
                 {filteredAndSortedSubscriptions.map(subscription => {
-                  const daysUntil = getDaysUntilPayment(subscription.next_billing_date);
+                  const daysUntil = getDaysUntilPayment(subscription);
+                  const correctNextBillingDate = getCorrectNextBillingDate(subscription);
                   
                   return (
                     <TableRow 
@@ -1161,7 +1168,7 @@ export function SubscriptionsTable({
                       <TableCell>
                         <div>
                           <div className="text-sm font-medium">
-                            {formatDate(subscription.next_billing_date, userDateFormat)}
+                            {formatDateForDisplayWithLocale(correctNextBillingDate, 'en-US', userDateFormat)}
                           </div>
                           <div className={cn("text-xs", 
                             daysUntil <= 7 ? "text-amber-600" : "text-gray-500"

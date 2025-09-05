@@ -32,7 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Loader2, Plus, X, TrendingUp, TrendingDown } from "lucide-react";
 import { useCreateLifetimeDeal, type CreateLifetimeDealData } from "@/lib/react-query/lifetime-deals";
-import { DateInput } from "@/components/ui/date-input";
+import { CustomDateInput } from "@/components/ui/custom-date-input";
 
 // Types
 interface Client {
@@ -409,7 +409,7 @@ export function AddLifetimeDealModal({
           {/* Purchase Date and Status */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <DateInput
+              <CustomDateInput
                 id="purchase_date"
                 label="Purchase Date"
                 value={form.watch("purchase_date")}
@@ -491,7 +491,7 @@ export function AddLifetimeDealModal({
                     )}
                   </div>
                   <div className="space-y-2">
-                    <DateInput
+                    <CustomDateInput
                       id="resold_date"
                       label="Resold Date"
                       value={form.watch("resold_date")}

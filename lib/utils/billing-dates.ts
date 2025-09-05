@@ -3,34 +3,58 @@
 
 /**
  * Calculate the next billing date based on start date and billing cycle
+ * This finds the next future billing date from today, accounting for multiple past cycles
  */
 export function calculateNextBillingDate(
   startDate: string | Date,
   billingCycle: 'weekly' | 'monthly' | 'quarterly' | 'annual'
 ): Date {
-  const start = new Date(startDate);
-  
-  switch (billingCycle) {
-    case 'weekly':
-      return new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
-    case 'monthly':
-      const monthly = new Date(start);
-      monthly.setMonth(monthly.getMonth() + 1);
-      return monthly;
-    case 'quarterly':
-      const quarterly = new Date(start);
-      quarterly.setMonth(quarterly.getMonth() + 3);
-      return quarterly;
-    case 'annual':
-      const annual = new Date(start);
-      annual.setFullYear(annual.getFullYear() + 1);
-      return annual;
-    default:
-      // Default to monthly
-      const defaultMonthly = new Date(start);
-      defaultMonthly.setMonth(defaultMonthly.getMonth() + 1);
-      return defaultMonthly;
+  // Parse date string as local date to avoid timezone issues
+  let start: Date;
+  if (typeof startDate === 'string') {
+    // Parse YYYY-MM-DD as local date, not UTC
+    const [year, month, day] = startDate.split('-').map(Number);
+    start = new Date(year, month - 1, day); // month is 0-indexed
+  } else {
+    start = new Date(startDate);
   }
+  
+  const today = new Date();
+  
+  // Set time to start of day for consistent comparisons
+  start.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  
+  // If start date is in the future, return the start date
+  if (start > today) {
+    return start;
+  }
+  
+  let nextBilling = new Date(start);
+  
+  // Keep adding billing cycles until we get a future date
+  while (nextBilling <= today) {
+    switch (billingCycle) {
+      case 'weekly':
+        nextBilling.setDate(nextBilling.getDate() + 7);
+        break;
+      case 'monthly':
+        nextBilling.setMonth(nextBilling.getMonth() + 1);
+        break;
+      case 'quarterly':
+        nextBilling.setMonth(nextBilling.getMonth() + 3);
+        break;
+      case 'annual':
+        nextBilling.setFullYear(nextBilling.getFullYear() + 1);
+        break;
+      default:
+        // Default to monthly
+        nextBilling.setMonth(nextBilling.getMonth() + 1);
+        break;
+    }
+  }
+  
+  return nextBilling;
 }
 
 /**

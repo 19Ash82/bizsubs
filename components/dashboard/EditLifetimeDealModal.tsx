@@ -27,7 +27,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Loader2, Plus, X, TrendingUp, TrendingDown } from 'lucide-react';
 import { useUpdateLifetimeDeal, type LifetimeDeal, type UpdateLifetimeDealData } from '@/lib/react-query/lifetime-deals';
-import { DateInput } from '@/components/ui/date-input';
+import { CustomDateInput } from '@/components/ui/custom-date-input';
 import { createClient } from '@/lib/supabase/client';
 
 // Types
@@ -438,7 +438,7 @@ export function EditLifetimeDealModal({
           {/* Purchase Date and Status */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <DateInput
+              <CustomDateInput
                 id="purchase_date"
                 label="Purchase Date"
                 value={formData.purchase_date}
@@ -518,7 +518,7 @@ export function EditLifetimeDealModal({
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <DateInput
+                    <CustomDateInput
                       id="resold_date"
                       label="Resold Date"
                       value={formData.resold_date}

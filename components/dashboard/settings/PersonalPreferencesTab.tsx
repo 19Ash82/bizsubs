@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useUpdateUserPreferences } from "@/lib/react-query/user-preferences";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,11 +32,11 @@ export function PersonalPreferencesTab({ preferences, onUpdate }: PersonalPrefer
   const [formData, setFormData] = useState({
     date_format_preference: preferences?.date_format_preference || 'US'
   });
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const updatePreferencesMutation = useUpdateUserPreferences();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
 
     try {
       const supabase = createClient();
@@ -46,7 +47,7 @@ export function PersonalPreferencesTab({ preferences, onUpdate }: PersonalPrefer
         return;
       }
 
-      // Update or create user preferences
+      // Prepare update data
       const preferencesData = {
         user_id: user.id,
         date_format_preference: formData.date_format_preference,
@@ -63,32 +64,27 @@ export function PersonalPreferencesTab({ preferences, onUpdate }: PersonalPrefer
         ...(preferences?.dashboard_layout && { 
           dashboard_layout: preferences.dashboard_layout 
         }),
-        updated_at: new Date().toISOString()
       };
 
-      const { error } = await supabase
-        .from("user_preferences")
-        .upsert(preferencesData, { onConflict: 'user_id' });
-
-      if (error) {
-        throw error;
-      }
+      // Use React Query mutation
+      const updatedPreferences = await updatePreferencesMutation.mutateAsync(preferencesData);
 
       toast.success("Personal preferences updated successfully");
       
       // Call onUpdate callback if provided
       if (onUpdate) {
-        onUpdate({
-          ...preferences,
-          ...preferencesData
-        } as UserPreferences);
+        onUpdate(updatedPreferences as UserPreferences);
       }
 
     } catch (error: any) {
       console.error("Error updating preferences:", error);
-      toast.error("Failed to update preferences: " + error.message);
-    } finally {
-      setIsLoading(false);
+      console.error("Error details:", {
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        code: error?.code
+      });
+      toast.error("Failed to update preferences: " + (error?.message || "Unknown error"));
     }
   };
 
@@ -172,8 +168,8 @@ export function PersonalPreferencesTab({ preferences, onUpdate }: PersonalPrefer
             </div>
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" disabled={updatePreferencesMutation.isPending}>
+                {updatePreferencesMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Save Preferences
               </Button>
             </div>

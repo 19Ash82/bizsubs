@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useUserPreferences } from "@/lib/react-query/user-preferences";
 import {
   WelcomeHeader,
   KeyMetricsCards,
@@ -57,6 +58,9 @@ export default function DashboardPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddSubscriptionModal, setShowAddSubscriptionModal] = useState(false);
+
+  // Load user preferences for date format
+  const { data: userPreferences } = useUserPreferences();
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -370,6 +374,7 @@ export default function DashboardPage() {
         userTier={data.profile?.subscription_tier}
         userCurrency={data.profile?.currency_preference}
         userTaxRate={data.profile?.tax_rate}
+        userDateFormat={userPreferences?.date_format_preference || 'US'}
       />
     </div>
   );
