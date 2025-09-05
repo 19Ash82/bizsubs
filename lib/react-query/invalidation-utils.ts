@@ -5,43 +5,43 @@ import { QueryClient } from '@tanstack/react-query';
 import { clientKeys } from './clients';
 import { subscriptionKeys } from './subscriptions';
 import { lifetimeDealKeys } from './lifetime-deals';
+import { projectKeys } from './projects';
 
 /**
  * Global cache refresh - invalidates ALL related queries
  * Use this for comprehensive updates that affect multiple data sources
  */
-export function globalCacheRefresh(queryClient: QueryClient, source: 'subscription' | 'lifetime-deal' | 'client') {
-  console.log(`🌍 Global cache refresh initiated from: ${source}`);
-  
-  // Invalidate all client-related queries (most important for cross-tab sync)
+export function globalCacheRefresh(queryClient: QueryClient, source: 'subscription' | 'lifetime-deal' | 'client' | 'project') {
+  // Invalidate all related queries (including the source to ensure fresh data)
   queryClient.invalidateQueries({ 
     queryKey: clientKeys.all,
     exact: false
   });
   
-  // Only invalidate other queries if not from the same source to avoid conflicts
-  if (source !== 'subscription') {
-    queryClient.invalidateQueries({ 
-      queryKey: subscriptionKeys.all,
-      exact: false
-    });
-  }
-  
-  if (source !== 'lifetime-deal') {
-    queryClient.invalidateQueries({ 
-      queryKey: lifetimeDealKeys.all,
-      exact: false
-    });
-  }
-  
-  // Only refetch client queries immediately (for cross-tab sync)
-  queryClient.refetchQueries({ 
-    queryKey: clientKeys.costs(),
-    exact: false,
-    type: 'active'
+  queryClient.invalidateQueries({ 
+    queryKey: subscriptionKeys.all,
+    exact: false
   });
   
-  console.log(`✅ Global cache refresh complete from: ${source}`);
+  queryClient.invalidateQueries({ 
+    queryKey: lifetimeDealKeys.all,
+    exact: false
+  });
+  
+  queryClient.invalidateQueries({ 
+    queryKey: projectKeys.all,
+    exact: false
+  });
+  
+  // Only refetch project queries immediately when subscriptions/lifetime deals change
+  // This ensures project counts update without waiting for user interaction
+  if (source === 'subscription' || source === 'lifetime-deal') {
+    queryClient.refetchQueries({ 
+      queryKey: projectKeys.lists(),
+      exact: false,
+      type: 'active'
+    });
+  }
 }
 
 /**
@@ -87,16 +87,46 @@ export function invalidateLifetimeDealsWithClientData(queryClient: QueryClient) 
  * Use this when subscriptions are created, updated, or deleted
  */
 export function invalidateAfterSubscriptionChange(queryClient: QueryClient) {
-  // Use global cache refresh for comprehensive updates
-  globalCacheRefresh(queryClient, 'subscription');
+  // Invalidate subscription queries
+  queryClient.invalidateQueries({ 
+    queryKey: subscriptionKeys.all,
+    exact: false
+  });
+  
+  // Invalidate project queries (for project count updates)
+  queryClient.invalidateQueries({ 
+    queryKey: projectKeys.all,
+    exact: false
+  });
+  
+  // Invalidate client queries (for client cost updates)
+  queryClient.invalidateQueries({ 
+    queryKey: clientKeys.all,
+    exact: false
+  });
 }
 
 /**
  * Complete invalidation for lifetime deal-related changes
  */
 export function invalidateAfterLifetimeDealChange(queryClient: QueryClient) {
-  // Use global cache refresh for comprehensive updates
-  globalCacheRefresh(queryClient, 'lifetime-deal');
+  // Invalidate lifetime deal queries
+  queryClient.invalidateQueries({ 
+    queryKey: lifetimeDealKeys.all,
+    exact: false
+  });
+  
+  // Invalidate project queries (for project count updates)
+  queryClient.invalidateQueries({ 
+    queryKey: projectKeys.all,
+    exact: false
+  });
+  
+  // Invalidate client queries (for client cost updates)
+  queryClient.invalidateQueries({ 
+    queryKey: clientKeys.all,
+    exact: false
+  });
 }
 
 /**
@@ -105,4 +135,30 @@ export function invalidateAfterLifetimeDealChange(queryClient: QueryClient) {
 export function invalidateAfterClientChange(queryClient: QueryClient) {
   // Use global cache refresh for comprehensive updates
   globalCacheRefresh(queryClient, 'client');
+}
+
+/**
+ * Invalidate all project cost queries regardless of filter state
+ * This ensures that project cost data is refreshed even with different filter combinations
+ */
+export function invalidateAllProjectCosts(queryClient: QueryClient) {
+  // Invalidate all project list queries (catches all filter variations)
+  queryClient.invalidateQueries({ 
+    queryKey: projectKeys.lists(),
+    exact: false // This ensures all queries starting with this key are invalidated
+  });
+  
+  // Also invalidate project costs queries
+  queryClient.invalidateQueries({ 
+    queryKey: projectKeys.costs(),
+    exact: false
+  });
+}
+
+/**
+ * Complete invalidation for project-related changes
+ */
+export function invalidateAfterProjectChange(queryClient: QueryClient) {
+  // Use global cache refresh for comprehensive updates
+  globalCacheRefresh(queryClient, 'project');
 }

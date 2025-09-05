@@ -248,12 +248,8 @@ export function useCreateLifetimeDeal() {
       toast.success('Lifetime deal created successfully');
     },
     onSettled: () => {
-      // Always refetch after error or success (same as subscriptions)
-      queryClient.invalidateQueries({ queryKey: lifetimeDealKeys.lists() });
-      // Invalidate client cost data since lifetime deal creation affects client costs
-      queryClient.invalidateQueries({ queryKey: clientKeys.costs() });
-      // Also invalidate the broader client keys to catch all variations
-      queryClient.invalidateQueries({ queryKey: clientKeys.all });
+      // Use smart caching system for comprehensive updates
+      invalidateAfterLifetimeDealChange(queryClient);
     },
   });
 }
@@ -350,12 +346,8 @@ export function useUpdateLifetimeDeal() {
       toast.success('Lifetime deal updated successfully');
     },
     onSettled: () => {
-      // Always refetch after error or success (same as subscriptions)
-      queryClient.invalidateQueries({ queryKey: lifetimeDealKeys.lists() });
-      // Invalidate client cost data since lifetime deal update affects client costs
-      queryClient.invalidateQueries({ queryKey: clientKeys.costs() });
-      // Also invalidate the broader client keys to catch all variations
-      queryClient.invalidateQueries({ queryKey: clientKeys.all });
+      // Use smart caching system for comprehensive updates
+      invalidateAfterLifetimeDealChange(queryClient);
     },
   });
 }
@@ -417,12 +409,8 @@ export function useDeleteLifetimeDeal() {
       toast.success('Lifetime deal deleted successfully');
     },
     onSettled: () => {
-      // Always refetch after error or success (same as subscriptions)
-      queryClient.invalidateQueries({ queryKey: lifetimeDealKeys.lists() });
-      // Invalidate client cost data since lifetime deal deletion affects client costs
-      queryClient.invalidateQueries({ queryKey: clientKeys.costs() });
-      // Also invalidate the broader client keys to catch all variations
-      queryClient.invalidateQueries({ queryKey: clientKeys.all });
+      // Use smart caching system for comprehensive updates
+      invalidateAfterLifetimeDealChange(queryClient);
     },
   });
 }

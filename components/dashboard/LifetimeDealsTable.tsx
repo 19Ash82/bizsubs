@@ -51,7 +51,7 @@ import {
 } from 'lucide-react';
 import { useLifetimeDeals, useDeleteLifetimeDeal, type LifetimeDeal } from '@/lib/react-query/lifetime-deals';
 import { useClients } from '@/lib/react-query/clients';
-import { useProjects } from '@/lib/react-query/projects';
+import { useProjectsWithCosts } from '@/lib/react-query/projects';
 
 // Types
 type SortField = 'service_name' | 'original_cost' | 'purchase_date' | 'status' | 'category' | 'profit_loss';
@@ -297,7 +297,7 @@ export function LifetimeDealsTable({
   });
   
   const { data: clients = [], isLoading: clientsLoading } = useClients();
-  const { data: projects = [], isLoading: projectsLoading } = useProjects();
+  const { data: projects = [], isLoading: projectsLoading } = useProjectsWithCosts();
   
   // Delete mutation
   const deleteLifetimeDealMutation = useDeleteLifetimeDeal();

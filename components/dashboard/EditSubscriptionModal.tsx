@@ -41,6 +41,7 @@ interface Subscription {
   tax_deductible: boolean;
   notes?: string;
   tax_rate?: number;
+  cancelled_date?: string;
 }
 
 interface Client {
@@ -79,6 +80,7 @@ interface SubscriptionFormData {
   tax_deductible: boolean;
   notes: string;
   tax_rate: string;
+  cancelled_date: string;
 }
 
 const BILLING_CYCLES = [
@@ -136,6 +138,7 @@ export function EditSubscriptionModal({
     tax_deductible: true,
     notes: '',
     tax_rate: userTaxRate.toString(),
+    cancelled_date: '',
   });
 
   const [clients, setClients] = useState<Client[]>([]);
@@ -170,6 +173,7 @@ export function EditSubscriptionModal({
         tax_deductible: subscription.tax_deductible,
         notes: notes,
         tax_rate: (subscription.tax_rate || userTaxRate).toString(),
+        cancelled_date: subscription.cancelled_date || '',
       });
       
       setInternalProjectName(extractedProjectName);
@@ -216,34 +220,33 @@ export function EditSubscriptionModal({
     }
   };
 
-  // Filter projects by selected client
-  const availableProjects = (formData.client_id && formData.client_id !== 'none')
-    ? projects.filter(project => project.client_id === formData.client_id)
-    : projects;
+  // Show all projects - subscriptions can be assigned to any project regardless of client
+  const availableProjects = projects;
 
-  // Clear project and internal project name when client changes
+  // Clear internal project name when switching away from internal client
   useEffect(() => {
     if (formData.client_id && formData.client_id !== 'internal' && formData.client_id !== 'none') {
-      // Switching to external client - clear internal project name and check project validity
+      // Switching to external client - clear internal project name
       setInternalProjectName('');
-      if (formData.project_id && formData.project_id !== 'none') {
-        const projectBelongsToClient = projects.find(
-          p => p.id === formData.project_id && p.client_id === formData.client_id
-        );
-        if (!projectBelongsToClient) {
-          setFormData(prev => ({ ...prev, project_id: 'none' }));
-        }
-      }
-    } else if (formData.client_id === 'internal') {
-      // Switching to internal - clear project_id
-      setFormData(prev => ({ ...prev, project_id: 'none' }));
     }
-  }, [formData.client_id, formData.project_id, projects]);
+    // Note: We no longer clear project_id when client changes since projects can be assigned regardless of client
+  }, [formData.client_id]);
 
   const handleInputChange = (field: keyof SubscriptionFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setError(null);
   };
+
+  // Auto-set cancelled_date when status changes to cancelled or paused
+  useEffect(() => {
+    if ((formData.status === 'cancelled' || formData.status === 'paused') && !formData.cancelled_date) {
+      const today = new Date().toISOString().split('T')[0];
+      setFormData(prev => ({ ...prev, cancelled_date: today }));
+    } else if (formData.status === 'active' && formData.cancelled_date) {
+      // Clear cancelled_date when status becomes active
+      setFormData(prev => ({ ...prev, cancelled_date: '' }));
+    }
+  }, [formData.status, formData.cancelled_date]);
 
   const validateForm = (): string | null => {
     if (!formData.service_name.trim()) return 'Service name is required';
@@ -253,6 +256,9 @@ export function EditSubscriptionModal({
     if (!formData.next_billing_date) return 'Next billing date is required';
     if (!formData.tax_rate || isNaN(parseFloat(formData.tax_rate)) || parseFloat(formData.tax_rate) < 0) {
       return 'Valid tax rate is required';
+    }
+    if ((formData.status === 'cancelled' || formData.status === 'paused') && !formData.cancelled_date) {
+      return `${formData.status === 'cancelled' ? 'Cancellation' : 'Pause'} date is required`;
     }
     return null;
   };
@@ -299,6 +305,7 @@ export function EditSubscriptionModal({
         tax_deductible: formData.tax_deductible,
         notes: finalNotes || null,
         tax_rate: parseFloat(formData.tax_rate),
+        cancelled_date: formData.cancelled_date || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -497,6 +504,29 @@ export function EditSubscriptionModal({
                 </Select>
               </div>
             </div>
+
+            {/* Cancelled Date - Only show when status is cancelled or paused */}
+            {(formData.status === 'cancelled' || formData.status === 'paused') && (
+              <div className="space-y-2">
+                <Label htmlFor="cancelled_date">
+                  {formData.status === 'cancelled' ? 'Cancellation Date' : 'Pause Date'} *
+                </Label>
+                <Input
+                  id="cancelled_date"
+                  type="date"
+                  value={formData.cancelled_date}
+                  onChange={(e) => handleInputChange('cancelled_date', e.target.value)}
+                  disabled={loading}
+                  required
+                />
+                <p className="text-sm text-gray-500">
+                  {formData.status === 'cancelled' 
+                    ? 'Enter the date when this subscription was cancelled for accurate tax calculations.'
+                    : 'Enter the date when this subscription was paused for accurate tax calculations.'
+                  }
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Assignment */}
@@ -533,34 +563,34 @@ export function EditSubscriptionModal({
 
               <div className="space-y-2">
                 <Label htmlFor="project_id">Project</Label>
-                {/* Show text input when Internal is selected, dropdown for actual clients */}
-                {(!formData.client_id || formData.client_id === 'internal') ? (
-                  <Input
-                    id="project_name"
-                    placeholder="Enter project name (optional)"
-                    value={internalProjectName}
-                    onChange={(e) => setInternalProjectName(e.target.value)}
-                    disabled={loading}
-                  />
-                ) : (
-                  <Select
-                    value={formData.project_id}
-                    onValueChange={(value) => handleInputChange('project_id', value)}
-                    disabled={loading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Project</SelectItem>
-                      {availableProjects.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                <Select
+                  value={formData.project_id}
+                  onValueChange={(value) => handleInputChange('project_id', value)}
+                  disabled={loading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Project</SelectItem>
+                    {availableProjects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-2 h-2 rounded-full" 
+                            style={{ backgroundColor: project.color_hex }}
+                          />
+                          <span>{project.name}</span>
+                          {project.client_id && (
+                            <span className="text-xs text-muted-foreground">
+                              ({clients.find(c => c.id === project.client_id)?.name || 'Unknown Client'})
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

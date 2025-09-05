@@ -41,6 +41,7 @@ interface Project {
   id: string;
   name: string;
   client_id: string;
+  color_hex: string;
 }
 
 interface EditLifetimeDealModalProps {
@@ -139,21 +140,10 @@ export function EditLifetimeDealModal({
     }
   }, [open, lifetimeDeal]);
 
-  // Filter projects when client changes
+  // Show all projects - lifetime deals can be assigned to any project regardless of client
   useEffect(() => {
-    if (formData.client_id && formData.client_id !== 'internal') {
-      const clientProjects = projects.filter(p => p.client_id === formData.client_id);
-      setFilteredProjects(clientProjects);
-      
-      // Reset project selection if current project doesn't belong to selected client
-      if (formData.project_id && !clientProjects.find(p => p.id === formData.project_id)) {
-        setFormData(prev => ({ ...prev, project_id: '' }));
-      }
-    } else {
-      setFilteredProjects([]);
-      setFormData(prev => ({ ...prev, project_id: '' }));
-    }
-  }, [formData.client_id, projects]);
+    setFilteredProjects(projects);
+  }, [projects]);
 
   // Handle status changes - clear/set resold fields appropriately
   useEffect(() => {
@@ -600,32 +590,34 @@ export function EditLifetimeDealModal({
             </div>
             <div className="space-y-2">
               <Label htmlFor="project_id">Project</Label>
-              {formData.client_id === 'internal' ? (
-                <Input
-                  placeholder="Internal project name (optional)"
-                  value={internalProjectName}
-                  onChange={(e) => setInternalProjectName(e.target.value)}
-                  disabled={isLoading}
-                />
-              ) : (
-                <Select
-                  value={formData.project_id}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, project_id: value }))}
-                  disabled={isLoading || !formData.client_id || formData.client_id === 'internal'}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No project</SelectItem>
-                    {filteredProjects.map(project => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <Select
+                value={formData.project_id}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, project_id: value }))}
+                disabled={isLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No project</SelectItem>
+                  {filteredProjects.map(project => (
+                    <SelectItem key={project.id} value={project.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: project.color_hex }}
+                        />
+                        <span>{project.name}</span>
+                        {project.client_id && (
+                          <span className="text-xs text-muted-foreground">
+                            ({clients.find(c => c.id === project.client_id)?.name || 'Unknown Client'})
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

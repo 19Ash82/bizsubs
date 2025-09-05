@@ -24,6 +24,7 @@ export interface Subscription {
   tax_deductible: boolean;
   notes?: string;
   tax_rate: number;
+  cancelled_date?: string;
   created_at: string;
   updated_at: string;
   clients?: {
@@ -49,6 +50,7 @@ export interface CreateSubscriptionData {
   tax_deductible: boolean;
   notes?: string;
   tax_rate: number;
+  cancelled_date?: string;
 }
 
 export interface UpdateSubscriptionData extends CreateSubscriptionData {
@@ -276,12 +278,8 @@ export function useUpdateSubscription() {
       toast.success('Subscription updated successfully');
     },
     onSettled: () => {
-      // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: subscriptionKeys.lists() });
-      // Invalidate client cost data since subscription update affects client costs
-      queryClient.invalidateQueries({ queryKey: clientKeys.costs() });
-      // Also invalidate the broader client keys to catch all variations
-      queryClient.invalidateQueries({ queryKey: clientKeys.all });
+      // Use smart caching system for comprehensive updates
+      invalidateAfterSubscriptionChange(queryClient);
     },
   });
 }
@@ -343,12 +341,8 @@ export function useDeleteSubscription() {
       toast.success('Subscription deleted successfully');
     },
     onSettled: () => {
-      // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: subscriptionKeys.lists() });
-      // Invalidate client cost data since subscription deletion affects client costs
-      queryClient.invalidateQueries({ queryKey: clientKeys.costs() });
-      // Also invalidate the broader client keys to catch all variations
-      queryClient.invalidateQueries({ queryKey: clientKeys.all });
+      // Use smart caching system for comprehensive updates
+      invalidateAfterSubscriptionChange(queryClient);
     },
   });
 }
