@@ -117,11 +117,12 @@ export default function DashboardPage() {
         }, 0) || 0;
 
         const taxDeductibleAmount = subscriptions?.reduce((sum, sub) => {
+          if (!sub.tax_deductible) return sum;
           const annualAmount = sub.billing_cycle === 'annual' ? sub.cost :
                               sub.billing_cycle === 'monthly' ? sub.cost * 12 :
                               sub.billing_cycle === 'quarterly' ? sub.cost * 4 :
                               sub.billing_cycle === 'weekly' ? sub.cost * 52 : sub.cost * 12;
-          return sum + (sub.tax_deductible ? annualAmount : 0);
+          return sum + (annualAmount * (sub.tax_rate || 0) / 100);
         }, 0) || 0;
 
         // Get renewals for this month
@@ -238,11 +239,12 @@ export default function DashboardPage() {
         }, 0) || 0;
 
         const taxDeductibleAmount = subscriptions?.reduce((sum, sub) => {
+          if (!sub.tax_deductible) return sum;
           const annualAmount = sub.billing_cycle === 'annual' ? sub.cost :
                               sub.billing_cycle === 'monthly' ? sub.cost * 12 :
                               sub.billing_cycle === 'quarterly' ? sub.cost * 4 :
                               sub.billing_cycle === 'weekly' ? sub.cost * 52 : sub.cost * 12;
-          return sum + (sub.tax_deductible ? annualAmount : 0);
+          return sum + (annualAmount * (sub.tax_rate || 0) / 100);
         }, 0) || 0;
 
         // Get renewals for this month
