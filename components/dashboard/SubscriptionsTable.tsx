@@ -68,11 +68,6 @@ interface Subscription {
     name: string;
     color_hex: string;
   };
-  clients?: Array<{
-    id: string;
-    name: string;
-    color_hex: string;
-  }>;
   project?: {
     id: string;
     name: string;
@@ -98,6 +93,7 @@ interface SubscriptionsTableProps {
   onEditSubscription?: (subscription: Subscription) => void;
   onDeleteSubscription?: (subscriptionId: string) => void;
   onAddSubscription?: () => void;
+  onDuplicateSubscription?: (subscription: Subscription) => void;
   onDataLoaded?: (data: { clients: Client[]; projects: Project[]; subscriptionCount: number }) => void;
 }
 
@@ -165,6 +161,24 @@ const formatDate = (dateString: string) => {
     month: 'short',
     day: 'numeric'
   });
+};
+
+// Extract internal project name from notes
+const getProjectName = (subscription: Subscription): string | null => {
+  // If there's a proper project from database join, use that
+  if (subscription.project) {
+    return subscription.project.name;
+  }
+  
+  // If no client (internal) and notes contain internal project, extract it
+  if (!subscription.client_id && subscription.notes) {
+    const match = subscription.notes.match(/^Internal Project: (.+?)(?:\n|$)/);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+  
+  return null;
 };
 
 // Client display component with "Client A +3 more" pattern
@@ -281,6 +295,7 @@ const MobileSubscriptionCard = ({
   onSelect, 
   onEdit, 
   onDelete, 
+  onDuplicate,
   userRole = 'admin' 
 }: {
   subscription: Subscription;
@@ -288,6 +303,7 @@ const MobileSubscriptionCard = ({
   onSelect: (checked: boolean) => void;
   onEdit: (subscription: Subscription) => void;
   onDelete: (subscriptionId: string) => void;
+  onDuplicate: (subscription: Subscription) => void;
   userRole?: 'admin' | 'member';
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -330,6 +346,11 @@ const MobileSubscriptionCard = ({
                   <Edit className="w-4 h-4 mr-2" />
                   Edit
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onDuplicate(subscription)}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onDelete(subscription.id)} className="text-red-600">
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete
@@ -349,20 +370,20 @@ const MobileSubscriptionCard = ({
             </div>
           </div>
 
-          {/* Client */}
-          <div>
-            <div className="text-xs text-gray-500 mb-1">Client</div>
-            <div className="min-w-0">
-              {(subscription.clients || subscription.client) ? (
-                <ClientDisplay 
-                  clients={subscription.clients || (subscription.client ? [subscription.client] : [])} 
-                  maxDisplay={1}
-                />
-              ) : (
-                <span className="text-sm text-gray-400">Unassigned</span>
-              )}
-            </div>
-          </div>
+                        {/* Client */}
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Client</div>
+                <div className="min-w-0">
+                  {subscription.client ? (
+                    <ClientDisplay 
+                      clients={[subscription.client]} 
+                      maxDisplay={1}
+                    />
+                  ) : (
+                    <span className="text-sm text-gray-400">Internal</span>
+                  )}
+                </div>
+              </div>
         </div>
 
         {/* Expand/Collapse Button */}
@@ -392,7 +413,7 @@ const MobileSubscriptionCard = ({
             <div className="flex justify-between">
               <span className="text-gray-500">Project</span>
               <span className="text-gray-900 text-right">
-                {subscription.project ? subscription.project.name : 'None'}
+                {getProjectName(subscription) || 'None'}
               </span>
             </div>
             
@@ -437,6 +458,7 @@ export function SubscriptionsTable({
   onEditSubscription,
   onDeleteSubscription,
   onAddSubscription,
+  onDuplicateSubscription,
   onDataLoaded = () => {} // Default no-op function to ensure consistent dependency array
 }: SubscriptionsTableProps) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -553,10 +575,15 @@ export function SubscriptionsTable({
   const filteredAndSortedSubscriptions = useMemo(() => {
     let filtered = subscriptions.filter(subscription => {
       // Search filter
-      if (searchQuery && !subscription.service_name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !subscription.client?.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !subscription.project?.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const serviceName = subscription.service_name.toLowerCase();
+        const clientName = subscription.client?.name.toLowerCase() || '';
+        const projectName = getProjectName(subscription)?.toLowerCase() || '';
+        
+        if (!serviceName.includes(query) && !clientName.includes(query) && !projectName.includes(query)) {
+          return false;
+        }
       }
       
       // Status filter
@@ -826,6 +853,7 @@ export function SubscriptionsTable({
               onSelect={(checked) => handleSelectSubscription(subscription.id, checked)}
               onEdit={onEditSubscription || (() => {})}
               onDelete={onDeleteSubscription || (() => {})}
+              onDuplicate={onDuplicateSubscription || (() => {})}
               userRole={userRole}
             />
           ))}
@@ -863,6 +891,7 @@ export function SubscriptionsTable({
                       <SortIcon field="client_name" />
                     </div>
                   </TableHead>
+                  <TableHead className="min-w-[100px]">Project</TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-gray-50 min-w-[100px]"
                     onClick={() => handleSort('cost')}
@@ -918,10 +947,25 @@ export function SubscriptionsTable({
                     </TableCell>
                     <TableCell>
                       <div className="max-w-[120px]">
-                        <ClientDisplay 
-                          clients={subscription.clients || (subscription.client ? [subscription.client] : [])} 
-                          maxDisplay={1}
-                        />
+                        {subscription.client ? (
+                          <ClientDisplay 
+                            clients={[subscription.client]} 
+                            maxDisplay={1}
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-400">Internal</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="max-w-[100px]">
+                        {getProjectName(subscription) ? (
+                          <div className="truncate" title={getProjectName(subscription)!}>
+                            <span className="text-sm">{getProjectName(subscription)}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="font-medium text-right">
@@ -948,7 +992,9 @@ export function SubscriptionsTable({
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onDuplicateSubscription?.(subscription)}
+                            >
                               <Copy className="w-4 h-4 mr-2" />
                               Duplicate
                             </DropdownMenuItem>
@@ -1080,16 +1126,20 @@ export function SubscriptionsTable({
                       </TableCell>
                       <TableCell>
                         <div className="max-w-[140px]">
-                          <ClientDisplay 
-                            clients={subscription.clients || (subscription.client ? [subscription.client] : [])} 
-                            maxDisplay={1}
-                          />
+                          {subscription.client ? (
+                            <ClientDisplay 
+                              clients={[subscription.client]} 
+                              maxDisplay={1}
+                            />
+                          ) : (
+                            <span className="text-sm text-gray-400">Internal</span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        {subscription.project ? (
-                          <div className="truncate max-w-[120px]" title={subscription.project.name}>
-                            <span className="text-sm">{subscription.project.name}</span>
+                        {getProjectName(subscription) ? (
+                          <div className="truncate max-w-[120px]" title={getProjectName(subscription)!}>
+                            <span className="text-sm">{getProjectName(subscription)}</span>
                           </div>
                         ) : (
                           <span className="text-gray-400">-</span>
@@ -1130,24 +1180,26 @@ export function SubscriptionsTable({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem 
-                                onClick={() => onEditSubscription?.(subscription)}
-                              >
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Copy className="w-4 h-4 mr-2" />
-                                Duplicate
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onClick={() => onDeleteSubscription?.(subscription.id)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
+                                                          <DropdownMenuItem 
+                              onClick={() => onEditSubscription?.(subscription)}
+                            >
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => onDuplicateSubscription?.(subscription)}
+                            >
+                              <Copy className="w-4 h-4 mr-2" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => onDeleteSubscription?.(subscription.id)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

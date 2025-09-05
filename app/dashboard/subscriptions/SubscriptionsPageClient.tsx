@@ -242,6 +242,80 @@ export function SubscriptionsPageClient({ profile, userRole }: SubscriptionsPage
     setShowAddModal(true);
   };
 
+  const handleDuplicateSubscription = async (subscription: Subscription) => {
+    try {
+      const supabase = createClient();
+      
+      // Get the current user for user_id
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        throw new Error('User not authenticated');
+      }
+
+      // Create a copy of the subscription with modified fields
+      const duplicatedSubscription = {
+        user_id: userData.user.id, // Required field for RLS
+        service_name: `${subscription.service_name} (Copy)`,
+        cost: subscription.cost,
+        billing_cycle: subscription.billing_cycle,
+        next_billing_date: subscription.next_billing_date,
+        category: subscription.category,
+        status: subscription.status,
+        currency: subscription.currency,
+        client_id: subscription.client_id,
+        project_id: subscription.project_id,
+        business_expense: subscription.business_expense,
+        tax_deductible: subscription.tax_deductible,
+        notes: subscription.notes ? `${subscription.notes} (Duplicated)` : null,
+        tax_rate: subscription.tax_rate || profile.tax_rate || 30.0, // Use subscription tax rate or user default
+      };
+
+      // Insert the duplicated subscription
+      const { data: newSubscription, error } = await supabase
+        .from('subscriptions')
+        .insert(duplicatedSubscription)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Database error details:', error);
+        throw error;
+      }
+
+      // Log the activity
+      if (newSubscription) {
+        await supabase.from('activity_logs').insert({
+          user_id: userData.user.id,
+          user_email: userData.user.email!,
+          action_type: 'create',
+          resource_type: 'subscription',
+          resource_id: newSubscription.id,
+          description: `Duplicated subscription: ${subscription.service_name} → ${duplicatedSubscription.service_name}`,
+        });
+      }
+
+      // Refresh the table and metrics
+      setRefreshKey(prev => prev + 1);
+      
+    } catch (error) {
+      console.error('Error duplicating subscription:', error);
+      
+      // Show user-friendly error message
+      let errorMessage = 'Failed to duplicate subscription. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('not authenticated')) {
+          errorMessage = 'Please log in to duplicate subscriptions.';
+        } else if (error.message.includes('permission')) {
+          errorMessage = 'You don\'t have permission to create subscriptions.';
+        }
+      }
+      
+      // For now using alert, but this should be replaced with a proper toast notification
+      alert(errorMessage);
+    }
+  };
+
   const handleTableDataLoaded = useCallback((data: { clients: any[]; projects: any[]; subscriptionCount: number }) => {
     setTableData(data);
   }, []);
@@ -387,6 +461,7 @@ export function SubscriptionsPageClient({ profile, userRole }: SubscriptionsPage
             onEditSubscription={handleEditSubscription}
             onDeleteSubscription={handleDeleteSubscription}
             onAddSubscription={handleAddSubscription}
+            onDuplicateSubscription={handleDuplicateSubscription}
             onDataLoaded={handleTableDataLoaded}
           />
         </div>

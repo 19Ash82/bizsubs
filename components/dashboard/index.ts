@@ -17,3 +17,6 @@ export { AddSubscriptionButton } from './AddSubscriptionButton';
 export { SubscriptionsTable } from './SubscriptionsTable';
 export { EditSubscriptionModal } from './EditSubscriptionModal';
 export { SubscriptionsTableDemo } from './SubscriptionsTableDemo';
+export { LifetimeDealsTable } from './LifetimeDealsTable';
+export { AddLifetimeDealModal } from './AddLifetimeDealModal';
+export { EditLifetimeDealModal } from './EditLifetimeDealModal';

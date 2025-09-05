@@ -377,14 +377,24 @@ Trial-to-free transition explanation
 - IP address and user agent logging for security
 - Real-time activity feed updates for team transparency
 
-### Benefits of Cloud-First Architecture
-- Reliable data persistence without sync conflicts
-- Real-time collaboration for team features
-- Simplified development with standard Supabase patterns
-- Automatic backups and data recovery
-- Activity logging for audit trails and business accountability
-- Always fresh data on page refresh/new tabs
-- No manual cache invalidation or sync button complexity
+### User Experience Standards:
+
+- All form submissions must provide immediate visual feedback without page refreshes
+- State changes should be reflected instantly in the interface with background persistence
+- Loading states should be contextual (button spinners, modal overlays) rather than full-page blocking
+- Users should maintain their current view state (filters, scroll position, modal context) across all operations
+
+### Frontend Architecture Patterns:
+- Implement optimistic updates for all create/update/delete operations
+- Use client-side state management with server synchronization patterns
+- Maintain single-page application behavior throughout the dashboard experience
+- Preserve user context and navigation state during all data operations
+
+### Data Consistency Requirements:
+- Client state should update immediately on user actions
+- Server validation errors must revert optimistic changes with clear error messaging
+- Background synchronization should handle network failures gracefully
+- Concurrent user updates should be resolved without data loss
 
 ### users
 - email, first_name, last_name, company_name, subscription_tier, trial_ends_at, currency_preference, financial_year_end, tax_rate

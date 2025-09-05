@@ -142,10 +142,20 @@ export function EditSubscriptionModal({
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [internalProjectName, setInternalProjectName] = useState("");
 
   // Initialize form with subscription data
   useEffect(() => {
     if (subscription && open) {
+      // Extract internal project name from notes if it exists
+      let notes = subscription.notes || '';
+      let extractedProjectName = '';
+      
+      if (!subscription.client_id && notes.startsWith('Internal Project: ')) {
+        extractedProjectName = notes.replace('Internal Project: ', '');
+        notes = ''; // Clear notes since it was just storing the project name
+      }
+      
       setFormData({
         service_name: subscription.service_name,
         cost: subscription.cost.toString(),
@@ -154,13 +164,15 @@ export function EditSubscriptionModal({
         category: subscription.category,
         status: subscription.status,
         currency: subscription.currency,
-        client_id: subscription.client_id || 'none',
+        client_id: subscription.client_id || 'internal',
         project_id: subscription.project_id || 'none',
         business_expense: subscription.business_expense,
         tax_deductible: subscription.tax_deductible,
-        notes: subscription.notes || '',
+        notes: notes,
         tax_rate: (subscription.tax_rate || userTaxRate).toString(),
       });
+      
+      setInternalProjectName(extractedProjectName);
     }
   }, [subscription, open, userTaxRate]);
 
@@ -209,15 +221,22 @@ export function EditSubscriptionModal({
     ? projects.filter(project => project.client_id === formData.client_id)
     : projects;
 
-  // Clear project if client changes
+  // Clear project and internal project name when client changes
   useEffect(() => {
-    if (formData.client_id && formData.client_id !== 'none' && formData.project_id && formData.project_id !== 'none') {
-      const projectBelongsToClient = projects.find(
-        p => p.id === formData.project_id && p.client_id === formData.client_id
-      );
-      if (!projectBelongsToClient) {
-        setFormData(prev => ({ ...prev, project_id: 'none' }));
+    if (formData.client_id && formData.client_id !== 'internal' && formData.client_id !== 'none') {
+      // Switching to external client - clear internal project name and check project validity
+      setInternalProjectName('');
+      if (formData.project_id && formData.project_id !== 'none') {
+        const projectBelongsToClient = projects.find(
+          p => p.id === formData.project_id && p.client_id === formData.client_id
+        );
+        if (!projectBelongsToClient) {
+          setFormData(prev => ({ ...prev, project_id: 'none' }));
+        }
       }
+    } else if (formData.client_id === 'internal') {
+      // Switching to internal - clear project_id
+      setFormData(prev => ({ ...prev, project_id: 'none' }));
     }
   }, [formData.client_id, formData.project_id, projects]);
 
@@ -255,6 +274,17 @@ export function EditSubscriptionModal({
     try {
       const supabase = createClient();
       
+      // Handle client_id and notes for internal projects
+      const isInternal = !formData.client_id || formData.client_id === 'internal';
+      let finalNotes = formData.notes.trim();
+      
+      // For internal projects, store project name in notes if provided
+      if (isInternal && internalProjectName.trim()) {
+        finalNotes = finalNotes 
+          ? `Internal Project: ${internalProjectName.trim()}\n\n${finalNotes}`
+          : `Internal Project: ${internalProjectName.trim()}`;
+      }
+
       const updateData = {
         service_name: formData.service_name.trim(),
         cost: parseFloat(formData.cost),
@@ -263,11 +293,11 @@ export function EditSubscriptionModal({
         category: formData.category,
         status: formData.status,
         currency: formData.currency,
-        client_id: (formData.client_id && formData.client_id !== 'none') ? formData.client_id : null,
+        client_id: isInternal ? null : formData.client_id,
         project_id: (formData.project_id && formData.project_id !== 'none') ? formData.project_id : null,
         business_expense: formData.business_expense,
         tax_deductible: formData.tax_deductible,
-        notes: formData.notes.trim() || null,
+        notes: finalNotes || null,
         tax_rate: parseFloat(formData.tax_rate),
         updated_at: new Date().toISOString(),
       };
@@ -305,6 +335,7 @@ export function EditSubscriptionModal({
     if (!loading) {
       onOpenChange(false);
       setError(null);
+      setInternalProjectName('');
     }
   };
 
@@ -484,7 +515,7 @@ export function EditSubscriptionModal({
                     <SelectValue placeholder="Select client (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No Client</SelectItem>
+                    <SelectItem value="internal">Internal</SelectItem>
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         <div className="flex items-center gap-2">
@@ -502,25 +533,33 @@ export function EditSubscriptionModal({
 
               <div className="space-y-2">
                 <Label htmlFor="project_id">Project</Label>
-                <Select
-                  value={formData.project_id}
-                  onValueChange={(value) => handleInputChange('project_id', value)}
-                  disabled={loading || !formData.client_id || formData.client_id === 'none'}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select project (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Project</SelectItem>
-                    {availableProjects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {(!formData.client_id || formData.client_id === 'none') && (
-                  <p className="text-xs text-gray-500">Select a client first to choose a project</p>
+                {/* Show text input when Internal is selected, dropdown for actual clients */}
+                {(!formData.client_id || formData.client_id === 'internal') ? (
+                  <Input
+                    id="project_name"
+                    placeholder="Enter project name (optional)"
+                    value={internalProjectName}
+                    onChange={(e) => setInternalProjectName(e.target.value)}
+                    disabled={loading}
+                  />
+                ) : (
+                  <Select
+                    value={formData.project_id}
+                    onValueChange={(value) => handleInputChange('project_id', value)}
+                    disabled={loading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Project</SelectItem>
+                      {availableProjects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             </div>
