@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { useSubscriptions } from '@/lib/react-query/subscriptions';
+import { useClients } from '@/lib/react-query/clients';
+import { useProjectsWithCosts } from '@/lib/react-query/projects';
+import { useDataContainerBlur } from '@/lib/hooks/useDataContainerBlur';
 import { 
   ChevronUp, 
   ChevronDown, 
@@ -479,11 +482,20 @@ export function SubscriptionsTable({
   onDuplicateSubscription,
   onDataLoaded = () => {} // Default no-op function to ensure consistent dependency array
 }: SubscriptionsTableProps) {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use React Query hooks for data fetching
+  const { data: subscriptions = [], isLoading: subscriptionsLoading, error: subscriptionsError } = useSubscriptions();
+  const { data: clients = [], isLoading: clientsLoading } = useClients();
+  const { data: projects = [], isLoading: projectsLoading } = useProjectsWithCosts();
+
+  // Set up blur overlay for table data
+  const { dataBlurClass } = useDataContainerBlur({
+    queryKeys: ['subscriptions'],
+    intensity: 'medium'
+  });
+
+  // Calculate overall loading and error states
+  const loading = subscriptionsLoading || clientsLoading || projectsLoading;
+  const error = subscriptionsError?.message || null;
   
   // Table state
   const [sortField, setSortField] = useState<SortField>('next_billing_date');
@@ -496,15 +508,6 @@ export function SubscriptionsTable({
   const [clientFilter, setClientFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const hasNotifiedParent = useRef(false);
-
-  // No need for JavaScript screen size detection - use CSS breakpoints only
-
-  // Fetch data
-  useEffect(() => {
-    fetchSubscriptions();
-    fetchClients();
-    fetchProjects();
-  }, []);
 
   // Notify parent when data is loaded - consistent dependency array
   useEffect(() => {
@@ -523,61 +526,6 @@ export function SubscriptionsTable({
   useEffect(() => {
     hasNotifiedParent.current = false;
   }, []);
-
-  const fetchSubscriptions = async () => {
-    try {
-      setLoading(true);
-      const supabase = createClient();
-      
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select(`
-          *,
-          client:clients(id, name, color_hex),
-          project:projects(id, name)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setSubscriptions(data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch subscriptions');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchClients = async () => {
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('status', 'active')
-        .order('name');
-
-      if (error) throw error;
-      setClients(data || []);
-    } catch (err) {
-      console.error('Failed to fetch clients:', err);
-    }
-  };
-
-  const fetchProjects = async () => {
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('status', 'active')
-        .order('name');
-
-      if (error) throw error;
-      setProjects(data || []);
-    } catch (err) {
-      console.error('Failed to fetch projects:', err);
-    }
-  };
 
   // Sorting logic
   const handleSort = (field: SortField) => {
@@ -733,14 +681,14 @@ export function SubscriptionsTable({
     );
   }
 
-  if (error) {
+  if (error && subscriptions.length === 0) {
     return (
       <Card className="border-red-200">
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center">
             <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
             <p className="text-red-600">{error}</p>
-            <Button variant="outline" onClick={fetchSubscriptions} className="mt-4">
+            <Button variant="outline" onClick={() => window.location.reload()} className="mt-4">
               Try Again
             </Button>
           </div>
@@ -851,7 +799,7 @@ export function SubscriptionsTable({
       
       {/* MOBILE LAYOUT (< 768px) - Card-based */}
       <div className="block md:hidden">
-        <div className="space-y-3">
+        <div className={`space-y-3 ${dataBlurClass}`}>
           {filteredAndSortedSubscriptions.map(subscription => (
             <MobileSubscriptionCard
               key={subscription.id}
@@ -932,7 +880,7 @@ export function SubscriptionsTable({
                   )}
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className={dataBlurClass}>
                 {filteredAndSortedSubscriptions.map(subscription => (
                   <TableRow 
                     key={subscription.id}
@@ -1108,7 +1056,7 @@ export function SubscriptionsTable({
                   )}
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody className={dataBlurClass}>
                 {filteredAndSortedSubscriptions.map(subscription => {
                   const daysUntil = getDaysUntilPayment(subscription);
                   const correctNextBillingDate = getCorrectNextBillingDate(subscription);

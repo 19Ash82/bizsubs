@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useMonthlyExpenseReport } from "@/lib/react-query/reports";
+import { useDataContainerBlur } from "@/lib/hooks/useDataContainerBlur";
 
 interface UserProfile {
   id: string;
@@ -52,6 +53,12 @@ export function MonthlyExpenseReport({
 }: MonthlyExpenseReportProps) {
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const { data: reportData, isLoading, error } = useMonthlyExpenseReport(filters, userProfile);
+
+  // Set up blur overlay for report data
+  const { dataBlurClass } = useDataContainerBlur({
+    queryKeys: ['monthly-expense-report'],
+    intensity: 'medium'
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -117,7 +124,7 @@ export function MonthlyExpenseReport({
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${dataBlurClass}`}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Business Expenses</CardTitle>
@@ -176,7 +183,7 @@ export function MonthlyExpenseReport({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className={`space-y-4 ${dataBlurClass}`}>
             {reportData.monthlyTotals.map((month) => {
               const isExpanded = expandedMonths.has(month.month);
               return (

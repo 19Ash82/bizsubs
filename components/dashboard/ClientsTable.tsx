@@ -52,6 +52,7 @@ import {
   Star
 } from 'lucide-react';
 import { useClientsWithCosts, useDeleteClient, useExportClients, type Client } from '@/lib/react-query/clients';
+import { useDataContainerBlur } from '@/lib/hooks/useDataContainerBlur';
 import { cn } from '@/lib/utils';
 
 // Types
@@ -240,6 +241,12 @@ export function ClientsTable({
   // React Query hooks for data fetching
   const { data: clients = [], isLoading, error } = useClientsWithCosts({
     status: statusFilter,
+  });
+  
+  // Set up blur overlay for table data
+  const { dataBlurClass } = useDataContainerBlur({
+    queryKeys: ['clients'],
+    intensity: 'medium'
   });
   
   // Delete mutation
@@ -608,7 +615,7 @@ export function ClientsTable({
                     {userRole === 'admin' && <TableHead className="w-12"></TableHead>}
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className={dataBlurClass}>
                   {filteredAndSortedClients.map((client) => (
                     <TableRow key={client.id} className="hover:bg-slate-50">
                       {userRole === 'admin' && (

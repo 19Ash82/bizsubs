@@ -19,6 +19,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { useCategoryBreakdown } from "@/lib/react-query/reports";
+import { useDataContainerBlur } from "@/lib/hooks/useDataContainerBlur";
 
 interface UserProfile {
   id: string;
@@ -78,6 +79,12 @@ export function CategoryBreakdown({
 }: CategoryBreakdownProps) {
   const { data: reportData, isLoading, error } = useCategoryBreakdown(filters, userProfile);
 
+  // Set up blur overlay for report data
+  const { dataBlurClass } = useDataContainerBlur({
+    queryKeys: ['category-breakdown'],
+    intensity: 'medium'
+  });
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -122,7 +129,7 @@ export function CategoryBreakdown({
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${dataBlurClass}`}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Business Expenses</CardTitle>

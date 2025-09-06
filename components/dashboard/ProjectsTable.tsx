@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Project } from '@/lib/react-query/projects';
+import { useDataContainerBlur } from '@/lib/hooks/useDataContainerBlur';
 
 interface ProjectsTableProps {
   projects: Project[];
@@ -63,6 +64,12 @@ export function ProjectsTable({
 }: ProjectsTableProps) {
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const deleteProjectMutation = useDeleteProject();
+
+  // Set up blur overlay for table data
+  const { dataBlurClass } = useDataContainerBlur({
+    queryKeys: ['projects'],
+    intensity: 'medium'
+  });
 
   const handleDeleteProject = async () => {
     if (!projectToDelete) return;
@@ -148,7 +155,7 @@ export function ProjectsTable({
               <TableHead className="w-[70px]"></TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className={dataBlurClass}>
             {projects.map((project) => (
               <TableRow key={project.id}>
                 <TableCell>

@@ -17,6 +17,7 @@ import {
   BarChart3
 } from "lucide-react";
 import { useClientCostReport } from "@/lib/react-query/reports";
+import { useDataContainerBlur } from "@/lib/hooks/useDataContainerBlur";
 
 interface UserProfile {
   id: string;
@@ -51,6 +52,12 @@ export function ClientCostReport({
   onFilterChange 
 }: ClientCostReportProps) {
   const { data: reportData, isLoading, error } = useClientCostReport(filters, userProfile);
+
+  // Set up blur overlay for report data
+  const { dataBlurClass } = useDataContainerBlur({
+    queryKeys: ['client-cost-report'],
+    intensity: 'medium'
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -92,7 +99,7 @@ export function ClientCostReport({
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${dataBlurClass}`}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Client Costs</CardTitle>
@@ -151,7 +158,7 @@ export function ClientCostReport({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className={`space-y-4 ${dataBlurClass}`}>
             {clientCosts.map((client) => {
               const percentage = totalCosts > 0 ? (client.totalCost / totalCosts) * 100 : 0;
               return (

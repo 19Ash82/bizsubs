@@ -51,6 +51,7 @@ import {
   TrendingDown
 } from 'lucide-react';
 import { useLifetimeDeals, useDeleteLifetimeDeal, type LifetimeDeal } from '@/lib/react-query/lifetime-deals';
+import { useDataContainerBlur } from '@/lib/hooks/useDataContainerBlur';
 import { formatDateForDisplayWithLocale } from '@/lib/utils/billing-dates';
 import { useClients } from '@/lib/react-query/clients';
 import { useProjectsWithCosts } from '@/lib/react-query/projects';
@@ -344,6 +345,12 @@ export function LifetimeDealsTable({
   
   const { data: clients = [], isLoading: clientsLoading } = useClients();
   const { data: projects = [], isLoading: projectsLoading } = useProjectsWithCosts();
+
+  // Set up blur overlay for table data
+  const { dataBlurClass } = useDataContainerBlur({
+    queryKeys: ['lifetime-deals'],
+    intensity: 'medium'
+  });
   
   // Delete mutation
   const deleteLifetimeDealMutation = useDeleteLifetimeDeal();
@@ -688,7 +695,7 @@ export function LifetimeDealsTable({
                 {userRole === 'admin' && <TableHead className="w-[50px]"></TableHead>}
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className={dataBlurClass}>
               {filteredAndSortedLifetimeDeals.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={userRole === 'admin' ? 10 : 9} className="text-center py-8">

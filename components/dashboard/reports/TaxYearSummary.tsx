@@ -18,6 +18,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { useTaxYearSummary } from "@/lib/react-query/reports";
+import { useDataContainerBlur } from "@/lib/hooks/useDataContainerBlur";
 
 interface UserProfile {
   id: string;
@@ -52,6 +53,12 @@ export function TaxYearSummary({
   onFilterChange 
 }: TaxYearSummaryProps) {
   const { data: reportData, isLoading, error } = useTaxYearSummary(filters, userProfile);
+
+  // Set up blur overlay for report data
+  const { dataBlurClass } = useDataContainerBlur({
+    queryKeys: ['tax-year-summary'],
+    intensity: 'medium'
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -133,7 +140,7 @@ export function TaxYearSummary({
       </Card>
 
       {/* Tax Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${dataBlurClass}`}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Business Expenses</CardTitle>

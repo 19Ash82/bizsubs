@@ -2,8 +2,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
+import { useUser } from "@/lib/react-query/user";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,10 +52,9 @@ interface ReportFilters {
 }
 
 export default function ReportsPage() {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [setupRequired, setSetupRequired] = useState(false);
+  // Use React Query for user data
+  const { user, profile, isLoading: userLoading, error: userError } = useUser();
+  
   const [activeTab, setActiveTab] = useState("overview");
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportReportType, setExportReportType] = useState("overview");
@@ -68,56 +67,22 @@ export default function ReportsPage() {
     }
   });
 
-  useEffect(() => {
-    async function loadUserProfile() {
-      try {
-        // Check if environment variables are configured
-        if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY) {
-          setSetupRequired(true);
-          setLoading(false);
-          return;
-        }
+  // Convert profile to expected format
+  const userProfile: UserProfile | null = profile ? {
+    id: profile.id,
+    first_name: profile.first_name || '',
+    last_name: profile.last_name || '',
+    company_name: profile.company_name || '',
+    currency_preference: profile.currency_preference || 'USD',
+    financial_year_end: profile.financial_year_end || '12-31',
+    tax_rate: profile.tax_rate || 30,
+    subscription_tier: profile.subscription_tier || 'free'
+  } : null;
 
-        const supabase = createClient();
-        
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError) {
-          console.error('Auth error:', authError);
-          setError(`Authentication error: ${authError.message}`);
-          setLoading(false);
-          return;
-        }
-
-        if (!user) {
-          setError("No user found. Please log in first.");
-          setLoading(false);
-          return;
-        }
-
-        const { data: profile, error: profileError } = await supabase
-          .from("users")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Profile error:', profileError);
-          setError(`Profile error: ${profileError.message}`);
-          setLoading(false);
-          return;
-        }
-
-        setUserProfile(profile);
-      } catch (error) {
-        console.error('Error loading user profile:', error);
-        setError(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadUserProfile();
-  }, []);
+  // Calculate loading and error states from React Query
+  const loading = userLoading;
+  const error = userError?.message || null;
+  const setupRequired = !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY;
 
   const handleFilterChange = (newFilters: Partial<ReportFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
