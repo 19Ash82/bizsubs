@@ -9,29 +9,23 @@ import {
   ChevronUp, 
   ChevronDown, 
   Search, 
-  Filter, 
   MoreHorizontal, 
   Edit, 
   Trash2, 
-  Copy, 
-  Users, 
-  X,
+  Copy,
   Plus,
-  Check,
   AlertTriangle,
   DollarSign,
-  Calendar
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -43,13 +37,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Table,
   TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '@/components/ui/table';
+import {
+  StandardizedTable,
+  StandardizedTableHeader,
+  StandardizedTableRow,
+  StandardizedTableHead,
+  StandardizedTableCell,
+  StandardizedCheckboxCell,
+  StandardizedActionCell,
+  StandardizedBulkToolbar,
+  STANDARDIZED_STYLES,
+} from './StandardizedTable';
 import { cn } from '@/lib/utils';
 import { formatDateForDisplayWithLocale, calculateNextBillingDate } from '@/lib/utils/billing-dates';
 
@@ -252,47 +252,6 @@ const EmptyState = ({ onAddSubscription }: { onAddSubscription?: () => void }) =
   </Card>
 );
 
-// Bulk operations toolbar
-const BulkOperationsToolbar = ({ 
-  selectedCount, 
-  onClearSelection, 
-  onBulkEdit, 
-  onBulkDelete,
-  userRole = 'admin'
-}: {
-  selectedCount: number;
-  onClearSelection: () => void;
-  onBulkEdit: () => void;
-  onBulkDelete: () => void;
-  userRole?: 'admin' | 'member';
-}) => (
-  <div className="flex items-center justify-between p-4 bg-violet-50 border border-violet-200 rounded-lg mb-4">
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-2">
-        <Checkbox checked={true} />
-        <span className="text-sm font-medium">
-          {selectedCount} subscription{selectedCount !== 1 ? 's' : ''} selected
-        </span>
-      </div>
-      <Button variant="ghost" size="sm" onClick={onClearSelection}>
-        <X className="w-4 h-4" />
-      </Button>
-    </div>
-    
-    {userRole === 'admin' && (
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onBulkEdit}>
-          <Edit className="w-4 h-4 mr-2" />
-          Edit Selected
-        </Button>
-        <Button variant="outline" size="sm" onClick={onBulkDelete} className="text-red-600 hover:text-red-700">
-          <Trash2 className="w-4 h-4 mr-2" />
-          Delete Selected
-        </Button>
-      </div>
-    )}
-  </div>
-);
 
 // Mobile card component - TRUE mobile-first design
 const MobileSubscriptionCard = ({ 
@@ -664,13 +623,6 @@ export function SubscriptionsTable({
     return uniqueCategories.sort();
   }, [subscriptions]);
 
-  // Sort icon component
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ChevronUp className="w-4 h-4 opacity-0" />;
-    return sortDirection === 'asc' ? 
-      <ChevronUp className="w-4 h-4 text-violet-600" /> : 
-      <ChevronDown className="w-4 h-4 text-violet-600" />;
-  };
 
   if (loading) {
     return (
@@ -772,13 +724,23 @@ export function SubscriptionsTable({
 
       {/* Bulk Operations Toolbar */}
       {selectedSubscriptions.size > 0 && (
-        <BulkOperationsToolbar
+        <StandardizedBulkToolbar
           selectedCount={selectedSubscriptions.size}
           onClearSelection={() => setSelectedSubscriptions(new Set())}
-          onBulkEdit={handleBulkEdit}
-          onBulkDelete={handleBulkDelete}
-          userRole={userRole}
-        />
+        >
+          {userRole === 'admin' && (
+            <>
+              <Button variant="outline" size="sm" onClick={handleBulkEdit}>
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Selected
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleBulkDelete} className="text-red-600 hover:text-red-700">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Selected
+              </Button>
+            </>
+          )}
+        </StandardizedBulkToolbar>
       )}
 
       {/* Results Summary */}
@@ -818,126 +780,111 @@ export function SubscriptionsTable({
 
       {/* TABLET LAYOUT (768px - 1024px) - Compressed Table */}
       <div className="hidden md:block lg:hidden">
-        <Card className="w-full">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedSubscriptions.size === filteredAndSortedSubscriptions.length && filteredAndSortedSubscriptions.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 min-w-[140px]"
-                    onClick={() => handleSort('service_name')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Name
-                      <SortIcon field="service_name" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 min-w-[120px]"
-                    onClick={() => handleSort('client_name')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Client
-                      <SortIcon field="client_name" />
-                    </div>
-                  </TableHead>
-                  <TableHead className="min-w-[100px]">Project</TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 min-w-[100px]"
-                    onClick={() => handleSort('cost')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Cost
-                      <SortIcon field="cost" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 min-w-[90px]"
-                    onClick={() => handleSort('billing_cycle')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Cycle
-                      <SortIcon field="billing_cycle" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 min-w-[100px]"
-                    onClick={() => handleSort('status')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Status
-                      <SortIcon field="status" />
-                    </div>
-                  </TableHead>
-                  {userRole === 'admin' && (
-                    <TableHead className="w-12">Actions</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
+        <StandardizedTable>
+          <StandardizedTableHeader>
+            <StandardizedTableRow>
+              <StandardizedTableHead width="checkbox">
+                <Checkbox
+                  checked={selectedSubscriptions.size === filteredAndSortedSubscriptions.length && filteredAndSortedSubscriptions.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+              </StandardizedTableHead>
+              <StandardizedTableHead 
+                width="medium"
+                sortable
+                sortDirection={sortField === 'service_name' ? sortDirection : null}
+                onSort={() => handleSort('service_name')}
+              >
+                Name
+              </StandardizedTableHead>
+              <StandardizedTableHead 
+                width="medium"
+                sortable
+                sortDirection={sortField === 'client_name' ? sortDirection : null}
+                onSort={() => handleSort('client_name')}
+              >
+                Client
+              </StandardizedTableHead>
+              <StandardizedTableHead width="small">Project</StandardizedTableHead>
+              <StandardizedTableHead 
+                width="small"
+                sortable
+                sortDirection={sortField === 'cost' ? sortDirection : null}
+                onSort={() => handleSort('cost')}
+              >
+                Cost
+              </StandardizedTableHead>
+              <StandardizedTableHead 
+                width="small"
+                sortable
+                sortDirection={sortField === 'billing_cycle' ? sortDirection : null}
+                onSort={() => handleSort('billing_cycle')}
+              >
+                Cycle
+              </StandardizedTableHead>
+              <StandardizedTableHead 
+                width="small"
+                sortable
+                sortDirection={sortField === 'status' ? sortDirection : null}
+                onSort={() => handleSort('status')}
+              >
+                Status
+              </StandardizedTableHead>
+              {userRole === 'admin' && (
+                <StandardizedTableHead width="action">Actions</StandardizedTableHead>
+              )}
+            </StandardizedTableRow>
+          </StandardizedTableHeader>
               <TableBody className={dataBlurClass}>
                 {filteredAndSortedSubscriptions.map(subscription => (
-                  <TableRow 
+                  <StandardizedTableRow 
                     key={subscription.id}
-                    className={cn(
-                      selectedSubscriptions.has(subscription.id) && "bg-violet-50"
-                    )}
+                    selected={selectedSubscriptions.has(subscription.id)}
                   >
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedSubscriptions.has(subscription.id)}
-                        onCheckedChange={(checked) => 
-                          handleSelectSubscription(subscription.id, checked as boolean)
-                        }
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <div className="truncate max-w-[140px]" title={subscription.service_name}>
+                    <StandardizedCheckboxCell
+                      checked={selectedSubscriptions.has(subscription.id)}
+                      onCheckedChange={(checked) => 
+                        handleSelectSubscription(subscription.id, checked as boolean)
+                      }
+                    />
+                    <StandardizedTableCell className="font-medium">
+                      <div className="truncate" title={subscription.service_name}>
                         {subscription.service_name}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-[120px]">
-                        {subscription.client ? (
-                          <ClientDisplay 
-                            clients={[subscription.client]} 
-                            maxDisplay={1}
-                          />
-                        ) : (
-                          <span className="text-sm text-gray-400">Internal</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-[100px]">
-                        {getProjectName(subscription) ? (
-                          <div className="truncate" title={getProjectName(subscription)!}>
-                            <span className="text-sm">{getProjectName(subscription)}</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium text-right">
+                    </StandardizedTableCell>
+                    <StandardizedTableCell>
+                      {subscription.client ? (
+                        <ClientDisplay 
+                          clients={[subscription.client]} 
+                          maxDisplay={1}
+                        />
+                      ) : (
+                        <span className="text-muted-foreground">Internal</span>
+                      )}
+                    </StandardizedTableCell>
+                    <StandardizedTableCell>
+                      {getProjectName(subscription) ? (
+                        <div className="truncate" title={getProjectName(subscription)!}>
+                          {getProjectName(subscription)}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </StandardizedTableCell>
+                    <StandardizedTableCell variant="numeric" className="font-medium">
                       {formatCurrency(subscription.cost, subscription.currency)}
-                    </TableCell>
-                    <TableCell>
+                    </StandardizedTableCell>
+                    <StandardizedTableCell>
                       <CycleBadge cycle={subscription.billing_cycle} />
-                    </TableCell>
-                    <TableCell>
+                    </StandardizedTableCell>
+                    <StandardizedTableCell>
                       <StatusBadge status={subscription.status} />
-                    </TableCell>
+                    </StandardizedTableCell>
                     {userRole === 'admin' && (
-                      <TableCell>
+                      <StandardizedActionCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" className={STANDARDIZED_STYLES.ACTION_BUTTON}>
                               <MoreHorizontal className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -964,210 +911,191 @@ export function SubscriptionsTable({
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </TableCell>
+                      </StandardizedActionCell>
                     )}
-                  </TableRow>
+                  </StandardizedTableRow>
                 ))}
               </TableBody>
-            </Table>
-          </div>
-        </Card>
+            </StandardizedTable>
       </div>
 
       {/* DESKTOP LAYOUT (> 1024px) - Full Table */}
       <div className="hidden lg:block">
-        <Card className="w-full">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedSubscriptions.size === filteredAndSortedSubscriptions.length && filteredAndSortedSubscriptions.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 min-w-[160px]"
-                    onClick={() => handleSort('service_name')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Name
-                      <SortIcon field="service_name" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 min-w-[140px]"
-                    onClick={() => handleSort('client_name')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Client
-                      <SortIcon field="client_name" />
-                    </div>
-                  </TableHead>
-                  <TableHead className="min-w-[120px]">Project</TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 min-w-[100px]"
-                    onClick={() => handleSort('category')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Category
-                      <SortIcon field="category" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 min-w-[100px]"
-                    onClick={() => handleSort('cost')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Cost
-                      <SortIcon field="cost" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 min-w-[90px]"
-                    onClick={() => handleSort('billing_cycle')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Cycle
-                      <SortIcon field="billing_cycle" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 min-w-[140px]"
-                    onClick={() => handleSort('next_billing_date')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Next Payment
-                      <SortIcon field="next_billing_date" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 min-w-[100px]"
-                    onClick={() => handleSort('status')}
-                  >
-                    <div className="flex items-center gap-2">
-                      Status
-                      <SortIcon field="status" />
-                    </div>
-                  </TableHead>
-                  {userRole === 'admin' && (
-                    <TableHead className="w-12">Actions</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
+        <StandardizedTable>
+          <StandardizedTableHeader>
+            <StandardizedTableRow>
+              <StandardizedTableHead width="checkbox">
+                <Checkbox
+                  checked={selectedSubscriptions.size === filteredAndSortedSubscriptions.length && filteredAndSortedSubscriptions.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+              </StandardizedTableHead>
+              <StandardizedTableHead 
+                width="large"
+                sortable
+                sortDirection={sortField === 'service_name' ? sortDirection : null}
+                onSort={() => handleSort('service_name')}
+              >
+                Name
+              </StandardizedTableHead>
+              <StandardizedTableHead 
+                width="medium"
+                sortable
+                sortDirection={sortField === 'client_name' ? sortDirection : null}
+                onSort={() => handleSort('client_name')}
+              >
+                Client
+              </StandardizedTableHead>
+              <StandardizedTableHead width="medium">Project</StandardizedTableHead>
+              <StandardizedTableHead 
+                width="small"
+                sortable
+                sortDirection={sortField === 'category' ? sortDirection : null}
+                onSort={() => handleSort('category')}
+              >
+                Category
+              </StandardizedTableHead>
+              <StandardizedTableHead 
+                width="small"
+                sortable
+                sortDirection={sortField === 'cost' ? sortDirection : null}
+                onSort={() => handleSort('cost')}
+              >
+                Cost
+              </StandardizedTableHead>
+              <StandardizedTableHead 
+                width="small"
+                sortable
+                sortDirection={sortField === 'billing_cycle' ? sortDirection : null}
+                onSort={() => handleSort('billing_cycle')}
+              >
+                Cycle
+              </StandardizedTableHead>
+              <StandardizedTableHead 
+                width="medium"
+                sortable
+                sortDirection={sortField === 'next_billing_date' ? sortDirection : null}
+                onSort={() => handleSort('next_billing_date')}
+              >
+                Next Payment
+              </StandardizedTableHead>
+              <StandardizedTableHead 
+                width="small"
+                sortable
+                sortDirection={sortField === 'status' ? sortDirection : null}
+                onSort={() => handleSort('status')}
+              >
+                Status
+              </StandardizedTableHead>
+              {userRole === 'admin' && (
+                <StandardizedTableHead width="action">Actions</StandardizedTableHead>
+              )}
+            </StandardizedTableRow>
+          </StandardizedTableHeader>
               <TableBody className={dataBlurClass}>
                 {filteredAndSortedSubscriptions.map(subscription => {
                   const daysUntil = getDaysUntilPayment(subscription);
                   const correctNextBillingDate = getCorrectNextBillingDate(subscription);
                   
                   return (
-                    <TableRow 
+                    <StandardizedTableRow 
                       key={subscription.id}
-                      className={cn(
-                        selectedSubscriptions.has(subscription.id) && "bg-violet-50"
-                      )}
+                      selected={selectedSubscriptions.has(subscription.id)}
                     >
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedSubscriptions.has(subscription.id)}
-                          onCheckedChange={(checked) => 
-                            handleSelectSubscription(subscription.id, checked as boolean)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        <div className="truncate max-w-[160px]" title={subscription.service_name}>
+                      <StandardizedCheckboxCell
+                        checked={selectedSubscriptions.has(subscription.id)}
+                        onCheckedChange={(checked) => 
+                          handleSelectSubscription(subscription.id, checked as boolean)
+                        }
+                      />
+                      <StandardizedTableCell className="font-medium">
+                        <div className="truncate" title={subscription.service_name}>
                           {subscription.service_name}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-[140px]">
-                          {subscription.client ? (
-                            <ClientDisplay 
-                              clients={[subscription.client]} 
-                              maxDisplay={1}
-                            />
-                          ) : (
-                            <span className="text-sm text-gray-400">Internal</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
+                      </StandardizedTableCell>
+                      <StandardizedTableCell>
+                        {subscription.client ? (
+                          <ClientDisplay 
+                            clients={[subscription.client]} 
+                            maxDisplay={1}
+                          />
+                        ) : (
+                          <span className="text-muted-foreground">Internal</span>
+                        )}
+                      </StandardizedTableCell>
+                      <StandardizedTableCell>
                         {getProjectName(subscription) ? (
-                          <div className="truncate max-w-[120px]" title={getProjectName(subscription)!}>
-                            <span className="text-sm">{getProjectName(subscription)}</span>
+                          <div className="truncate" title={getProjectName(subscription)!}>
+                            {getProjectName(subscription)}
                           </div>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span className="text-muted-foreground">-</span>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </StandardizedTableCell>
+                      <StandardizedTableCell>
                         <Badge variant="outline" className="text-xs capitalize">
                           {subscription.category}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium text-right">
+                      </StandardizedTableCell>
+                      <StandardizedTableCell variant="numeric" className="font-medium">
                         {formatCurrency(subscription.cost, subscription.currency)}
-                      </TableCell>
-                      <TableCell>
+                      </StandardizedTableCell>
+                      <StandardizedTableCell>
                         <CycleBadge cycle={subscription.billing_cycle} />
-                      </TableCell>
-                      <TableCell>
+                      </StandardizedTableCell>
+                      <StandardizedTableCell>
                         <div>
-                          <div className="text-sm font-medium">
+                          <div className="font-medium">
                             {formatDateForDisplayWithLocale(correctNextBillingDate, 'en-US', userDateFormat)}
                           </div>
                           <div className={cn("text-xs", 
-                            daysUntil <= 7 ? "text-amber-600" : "text-gray-500"
+                            daysUntil <= 7 ? "text-amber-600" : "text-muted-foreground"
                           )}>
                             {daysUntil > 0 ? `${daysUntil} days` : daysUntil === 0 ? 'Today' : 'Overdue'}
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
+                      </StandardizedTableCell>
+                      <StandardizedTableCell>
                         <StatusBadge status={subscription.status} />
-                      </TableCell>
+                      </StandardizedTableCell>
                       {userRole === 'admin' && (
-                        <TableCell>
+                        <StandardizedActionCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" className={STANDARDIZED_STYLES.ACTION_BUTTON}>
                                 <MoreHorizontal className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                                          <DropdownMenuItem 
-                              onClick={() => onEditSubscription?.(subscription)}
-                            >
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => onDuplicateSubscription?.(subscription)}
-                            >
-                              <Copy className="w-4 h-4 mr-2" />
-                              Duplicate
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => onDeleteSubscription?.(subscription.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => onEditSubscription?.(subscription)}
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => onDuplicateSubscription?.(subscription)}
+                              >
+                                <Copy className="w-4 h-4 mr-2" />
+                                Duplicate
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => onDeleteSubscription?.(subscription.id)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
+                        </StandardizedActionCell>
                       )}
-                    </TableRow>
+                    </StandardizedTableRow>
                   );
                 })}
               </TableBody>
-            </Table>
-          </div>
-        </Card>
+            </StandardizedTable>
       </div>
     </div>
   );

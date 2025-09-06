@@ -16,13 +16,21 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  StandardizedTable,
+  StandardizedTableHeader,
+  StandardizedTableRow,
+  StandardizedTableHead,
+  StandardizedTableCell,
+  StandardizedCheckboxCell,
+  StandardizedActionCell,
+  StandardizedBulkToolbar,
+  STANDARDIZED_STYLES,
+} from './StandardizedTable';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,22 +40,16 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Search, 
-  Filter, 
   MoreHorizontal, 
   Edit, 
   Copy, 
-  Trash2, 
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
+  Trash2,
   Calendar,
   DollarSign,
   Building,
-  Tag,
   Loader2,
   AlertCircle,
   TrendingUp,
-  X,
   TrendingDown
 } from 'lucide-react';
 import { useLifetimeDeals, useDeleteLifetimeDeal, type LifetimeDeal } from '@/lib/react-query/lifetime-deals';
@@ -90,47 +92,6 @@ const CATEGORIES = [
   'other'
 ];
 
-// Bulk operations toolbar
-const BulkOperationsToolbar = ({ 
-  selectedCount, 
-  onClearSelection, 
-  onBulkEdit, 
-  onBulkDelete,
-  userRole = 'admin'
-}: {
-  selectedCount: number;
-  onClearSelection: () => void;
-  onBulkEdit: () => void;
-  onBulkDelete: () => void;
-  userRole?: 'admin' | 'member';
-}) => (
-  <div className="flex items-center justify-between p-4 bg-violet-50 border border-violet-200 rounded-lg mb-4">
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-2">
-        <Checkbox checked={true} />
-        <span className="text-sm font-medium">
-          {selectedCount} lifetime deal{selectedCount !== 1 ? 's' : ''} selected
-        </span>
-      </div>
-      <Button variant="ghost" size="sm" onClick={onClearSelection}>
-        <X className="w-4 h-4" />
-      </Button>
-    </div>
-    
-    {userRole === 'admin' && (
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onBulkEdit}>
-          <Edit className="w-4 h-4 mr-2" />
-          Edit Selected
-        </Button>
-        <Button variant="outline" size="sm" onClick={onBulkDelete} className="text-red-600 hover:text-red-700">
-          <Trash2 className="w-4 h-4 mr-2" />
-          Delete Selected
-        </Button>
-      </div>
-    )}
-  </div>
-);
 
 const MobileLifetimeDealCard = ({ 
   lifetimeDeal, 
@@ -493,10 +454,6 @@ export function LifetimeDealsTable({
     return `${symbols[currency] || '$'}${amount.toFixed(2)}`;
   };
 
-  const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return <ArrowUpDown className="h-4 w-4" />;
-    return sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
-  };
 
   const getProfitLossDisplay = (deal: LifetimeDeal) => {
     if (deal.status !== 'resold' || !deal.resold_price) {
@@ -545,13 +502,23 @@ export function LifetimeDealsTable({
     <div className="space-y-6">
       {/* Bulk Operations Toolbar */}
       {selectedLifetimeDeals.size > 0 && (
-        <BulkOperationsToolbar
+        <StandardizedBulkToolbar
           selectedCount={selectedLifetimeDeals.size}
           onClearSelection={handleClearSelection}
-          onBulkEdit={handleBulkEdit}
-          onBulkDelete={handleBulkDelete}
-          userRole={userRole}
-        />
+        >
+          {userRole === 'admin' && (
+            <>
+              <Button variant="outline" size="sm" onClick={handleBulkEdit}>
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Selected
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleBulkDelete} className="text-red-600 hover:text-red-700">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Selected
+              </Button>
+            </>
+          )}
+        </StandardizedBulkToolbar>
       )}
 
       {/* Search and Filters */}
@@ -614,92 +581,73 @@ export function LifetimeDealsTable({
 
       {/* Desktop Table */}
       <div className="hidden md:block">
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">
-                  <Checkbox
-                    checked={selectedLifetimeDeals.size === filteredAndSortedLifetimeDeals.length && filteredAndSortedLifetimeDeals.length > 0}
-                    onCheckedChange={handleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('service_name')}
-                    className="h-auto p-0 font-medium"
-                  >
-                    Service
-                    {getSortIcon('service_name')}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('original_cost')}
-                    className="h-auto p-0 font-medium"
-                  >
-                    Original Cost
-                    {getSortIcon('original_cost')}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('purchase_date')}
-                    className="h-auto p-0 font-medium"
-                  >
-                    Purchase Date
-                    {getSortIcon('purchase_date')}
-                  </Button>
-                </TableHead>
-                <TableHead>Resold Value</TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('profit_loss')}
-                    className="h-auto p-0 font-medium"
-                  >
-                    Profit/Loss
-                    {getSortIcon('profit_loss')}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('status')}
-                    className="h-auto p-0 font-medium"
-                  >
-                    Status
-                    {getSortIcon('status')}
-                  </Button>
-                </TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('category')}
-                    className="h-auto p-0 font-medium"
-                  >
-                    Category
-                    {getSortIcon('category')}
-                  </Button>
-                </TableHead>
-                {userRole === 'admin' && <TableHead className="w-[50px]"></TableHead>}
-              </TableRow>
-            </TableHeader>
+        <StandardizedTable>
+          <StandardizedTableHeader>
+            <StandardizedTableRow>
+              <StandardizedTableHead width="checkbox">
+                <Checkbox
+                  checked={selectedLifetimeDeals.size === filteredAndSortedLifetimeDeals.length && filteredAndSortedLifetimeDeals.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+              </StandardizedTableHead>
+              <StandardizedTableHead
+                width="large"
+                sortable
+                sortDirection={sortField === 'service_name' ? sortDirection : null}
+                onSort={() => handleSort('service_name')}
+              >
+                Service
+              </StandardizedTableHead>
+              <StandardizedTableHead
+                width="medium"
+                sortable
+                sortDirection={sortField === 'original_cost' ? sortDirection : null}
+                onSort={() => handleSort('original_cost')}
+              >
+                Original Cost
+              </StandardizedTableHead>
+              <StandardizedTableHead
+                width="medium"
+                sortable
+                sortDirection={sortField === 'purchase_date' ? sortDirection : null}
+                onSort={() => handleSort('purchase_date')}
+              >
+                Purchase Date
+              </StandardizedTableHead>
+              <StandardizedTableHead width="medium">Resold Value</StandardizedTableHead>
+              <StandardizedTableHead
+                width="medium"
+                sortable
+                sortDirection={sortField === 'profit_loss' ? sortDirection : null}
+                onSort={() => handleSort('profit_loss')}
+              >
+                Profit/Loss
+              </StandardizedTableHead>
+              <StandardizedTableHead
+                width="small"
+                sortable
+                sortDirection={sortField === 'status' ? sortDirection : null}
+                onSort={() => handleSort('status')}
+              >
+                Status
+              </StandardizedTableHead>
+              <StandardizedTableHead width="medium">Client</StandardizedTableHead>
+              <StandardizedTableHead
+                width="small"
+                sortable
+                sortDirection={sortField === 'category' ? sortDirection : null}
+                onSort={() => handleSort('category')}
+              >
+                Category
+              </StandardizedTableHead>
+              {userRole === 'admin' && <StandardizedTableHead width="action"></StandardizedTableHead>}
+            </StandardizedTableRow>
+          </StandardizedTableHeader>
             <TableBody className={dataBlurClass}>
               {filteredAndSortedLifetimeDeals.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={userRole === 'admin' ? 10 : 9} className="text-center py-8">
-                    <div className="text-gray-500">
+                    <div className="text-muted-foreground">
                       {searchQuery || statusFilter !== 'all' || clientFilter !== 'all' || categoryFilter !== 'all' 
                         ? 'No lifetime deals match your filters.' 
                         : 'No lifetime deals yet. Add your first lifetime deal to get started.'}
@@ -713,48 +661,46 @@ export function LifetimeDealsTable({
                   const statusConfig = LIFETIME_DEAL_STATUSES.find(s => s.value === lifetimeDeal.status);
                   
                   return (
-                    <TableRow key={lifetimeDeal.id}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedLifetimeDeals.has(lifetimeDeal.id)}
-                          onCheckedChange={(checked) => handleSelectLifetimeDeal(lifetimeDeal.id, checked as boolean)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">
+                    <StandardizedTableRow key={lifetimeDeal.id}>
+                      <StandardizedCheckboxCell
+                        checked={selectedLifetimeDeals.has(lifetimeDeal.id)}
+                        onCheckedChange={(checked) => handleSelectLifetimeDeal(lifetimeDeal.id, checked as boolean)}
+                      />
+                      <StandardizedTableCell className="font-medium">
                         {lifetimeDeal.service_name}
                         {lifetimeDeal.notes && (
-                          <div className="text-sm text-gray-500 mt-1">
+                          <div className="text-xs text-muted-foreground mt-1">
                             {lifetimeDeal.notes.substring(0, 50)}
                             {lifetimeDeal.notes.length > 50 && '...'}
                           </div>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </StandardizedTableCell>
+                      <StandardizedTableCell variant="numeric">
                         {formatCurrency(lifetimeDeal.original_cost, lifetimeDeal.currency)}
-                      </TableCell>
-                      <TableCell>
+                      </StandardizedTableCell>
+                      <StandardizedTableCell>
                         {formatDateForDisplayWithLocale(lifetimeDeal.purchase_date, 'en-US', userDateFormat)}
-                      </TableCell>
-                      <TableCell>
+                      </StandardizedTableCell>
+                      <StandardizedTableCell variant="numeric">
                         {lifetimeDeal.status === 'resold' && lifetimeDeal.resold_price 
                           ? formatCurrency(lifetimeDeal.resold_price, lifetimeDeal.currency)
                           : lifetimeDeal.status === 'shutdown' 
                             ? formatCurrency(0, lifetimeDeal.currency)
-                            : <span className="text-gray-400">-</span>
+                            : <span className="text-muted-foreground">-</span>
                         }
-                      </TableCell>
-                      <TableCell>
+                      </StandardizedTableCell>
+                      <StandardizedTableCell>
                         {getProfitLossDisplay(lifetimeDeal)}
-                      </TableCell>
-                      <TableCell>
+                      </StandardizedTableCell>
+                      <StandardizedTableCell>
                         <Badge 
                           variant="secondary" 
                           className={`${statusConfig?.color} text-white`}
                         >
                           {statusConfig?.label}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
+                      </StandardizedTableCell>
+                      <StandardizedTableCell>
                         {client ? (
                           <div className="flex items-center gap-2">
                             <div 
@@ -763,23 +709,23 @@ export function LifetimeDealsTable({
                             />
                             <span>{client.name}</span>
                             {project && (
-                              <span className="text-sm text-gray-500">• {project.name}</span>
+                              <span className="text-xs text-muted-foreground">• {project.name}</span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-gray-500">Internal</span>
+                          <span className="text-muted-foreground">Internal</span>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </StandardizedTableCell>
+                      <StandardizedTableCell>
                         <Badge variant="outline">
                           {lifetimeDeal.category.charAt(0).toUpperCase() + lifetimeDeal.category.slice(1)}
                         </Badge>
-                      </TableCell>
+                      </StandardizedTableCell>
                       {userRole === 'admin' && (
-                        <TableCell>
+                        <StandardizedActionCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" className={STANDARDIZED_STYLES.ACTION_BUTTON}>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -801,15 +747,14 @@ export function LifetimeDealsTable({
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
+                        </StandardizedActionCell>
                       )}
-                    </TableRow>
+                    </StandardizedTableRow>
                   );
                 })
               )}
             </TableBody>
-          </Table>
-        </div>
+          </StandardizedTable>
       </div>
 
       {/* Mobile Cards */}

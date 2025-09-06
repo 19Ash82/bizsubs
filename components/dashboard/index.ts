@@ -29,3 +29,18 @@ export { EditProjectModal } from './EditProjectModal';
 export { ProjectFilterBar } from './ProjectFilterBar';
 export { ProjectCostBreakdownModal } from './ProjectCostBreakdownModal';
 export { ClientDisplay, ProjectDisplay, ClientProjectDisplay, ColorIndicator, StatusBadge } from './ClientProjectDisplay';
+
+// Standardized table components
+export { 
+  StandardizedTable,
+  StandardizedTableHeader,
+  StandardizedTableRow,
+  StandardizedTableHead,
+  StandardizedTableCell,
+  StandardizedCheckboxCell,
+  StandardizedActionCell,
+  StandardizedBulkToolbar,
+  StandardizedTableSkeleton,
+  StandardizedTableEmptyState,
+  STANDARDIZED_STYLES
+} from './StandardizedTable';

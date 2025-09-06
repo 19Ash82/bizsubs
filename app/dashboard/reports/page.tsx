@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { useUser } from "@/lib/react-query/user";
+import { useDataContainerBlur } from "@/lib/hooks/useDataContainerBlur";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -83,6 +84,32 @@ export default function ReportsPage() {
   const loading = userLoading;
   const error = userError?.message || null;
   const setupRequired = !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY;
+
+  // Set up blur overlays for different report sections
+  const { dataBlurClass: overviewBlurClass } = useDataContainerBlur({
+    queryKeys: ['monthly-expense-report', 'tax-year-summary'],
+    intensity: 'medium'
+  });
+
+  const { dataBlurClass: monthlyBlurClass } = useDataContainerBlur({
+    queryKeys: ['monthly-expense-report'],
+    intensity: 'medium'
+  });
+
+  const { dataBlurClass: taxYearBlurClass } = useDataContainerBlur({
+    queryKeys: ['tax-year-summary'],
+    intensity: 'medium'
+  });
+
+  const { dataBlurClass: clientBlurClass } = useDataContainerBlur({
+    queryKeys: ['client-cost-report'],
+    intensity: 'medium'
+  });
+
+  const { dataBlurClass: categoryBlurClass } = useDataContainerBlur({
+    queryKeys: ['category-breakdown'],
+    intensity: 'medium'
+  });
 
   const handleFilterChange = (newFilters: Partial<ReportFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
@@ -201,7 +228,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Business Context Cards */}
+      {/* Business Context Cards - Static UI, no blur needed */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -282,44 +309,54 @@ export default function ReportsPage() {
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          <ReportsOverview
-            userProfile={userProfile}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onExportReport={handleExportReport}
-          />
+          <div className={overviewBlurClass}>
+            <ReportsOverview
+              userProfile={userProfile}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onExportReport={handleExportReport}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="monthly" className="mt-6">
-          <MonthlyExpenseReport
-            userProfile={userProfile}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-          />
+          <div className={monthlyBlurClass}>
+            <MonthlyExpenseReport
+              userProfile={userProfile}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="tax" className="mt-6">
-          <TaxYearSummary
-            userProfile={userProfile}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-          />
+          <div className={taxYearBlurClass}>
+            <TaxYearSummary
+              userProfile={userProfile}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="client" className="mt-6">
-          <ClientCostReport
-            userProfile={userProfile}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-          />
+          <div className={clientBlurClass}>
+            <ClientCostReport
+              userProfile={userProfile}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="category" className="mt-6">
-          <CategoryBreakdown
-            userProfile={userProfile}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-          />
+          <div className={categoryBlurClass}>
+            <CategoryBreakdown
+              userProfile={userProfile}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+            />
+          </div>
         </TabsContent>
       </Tabs>
 

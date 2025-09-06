@@ -6,13 +6,19 @@
 import { useState } from 'react';
 import { useDeleteProject } from '@/lib/react-query/projects';
 import {
-  Table,
   TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '@/components/ui/table';
+import {
+  StandardizedTable,
+  StandardizedTableHeader,
+  StandardizedTableRow,
+  StandardizedTableHead,
+  StandardizedTableCell,
+  StandardizedActionCell,
+  StandardizedTableSkeleton,
+  StandardizedTableEmptyState,
+  STANDARDIZED_STYLES,
+} from './StandardizedTable';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +28,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,7 +46,6 @@ import {
   FolderOpen,
   DollarSign,
   Calendar,
-  User,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Project } from '@/lib/react-query/projects';
@@ -104,68 +108,63 @@ export function ProjectsTable({
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="py-8">
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-4">
-                <div className="h-4 w-4 bg-muted animate-pulse rounded-full" />
-                <div className="h-4 bg-muted animate-pulse rounded flex-1" />
-                <div className="h-4 w-20 bg-muted animate-pulse rounded" />
-                <div className="h-4 w-16 bg-muted animate-pulse rounded" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <StandardizedTableSkeleton rows={5} columns={8} />
     );
   }
 
   if (projects.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-8">
-          <div className="text-center space-y-4">
-            <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto" />
-            <div>
-              <h3 className="text-lg font-medium">No projects found</h3>
-              <p className="text-muted-foreground">
-                Create your first project to organize subscriptions and track costs.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <StandardizedTable>
+        <StandardizedTableHeader>
+          <StandardizedTableRow>
+            <StandardizedTableHead width="large">Project</StandardizedTableHead>
+            <StandardizedTableHead width="medium">Client</StandardizedTableHead>
+            <StandardizedTableHead width="small">Status</StandardizedTableHead>
+            <StandardizedTableHead width="medium">Monthly Cost</StandardizedTableHead>
+            <StandardizedTableHead width="small">Subscriptions</StandardizedTableHead>
+            <StandardizedTableHead width="small">Lifetime Deals</StandardizedTableHead>
+            <StandardizedTableHead width="medium">Created</StandardizedTableHead>
+            <StandardizedTableHead width="action"></StandardizedTableHead>
+          </StandardizedTableRow>
+        </StandardizedTableHeader>
+        <TableBody>
+          <StandardizedTableEmptyState
+            icon={FolderOpen}
+            title="No projects found"
+            description="Create your first project to organize subscriptions and track costs."
+            columns={8}
+          />
+        </TableBody>
+      </StandardizedTable>
     );
   }
 
   return (
     <>
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Project</TableHead>
-              <TableHead>Client</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Monthly Cost</TableHead>
-              <TableHead className="text-right">Subscriptions</TableHead>
-              <TableHead className="text-right">Lifetime Deals</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="w-[70px]"></TableHead>
-            </TableRow>
-          </TableHeader>
+      <StandardizedTable>
+        <StandardizedTableHeader>
+          <StandardizedTableRow>
+            <StandardizedTableHead width="large">Project</StandardizedTableHead>
+            <StandardizedTableHead width="medium">Client</StandardizedTableHead>
+            <StandardizedTableHead width="small">Status</StandardizedTableHead>
+            <StandardizedTableHead width="medium">Monthly Cost</StandardizedTableHead>
+            <StandardizedTableHead width="small">Subscriptions</StandardizedTableHead>
+            <StandardizedTableHead width="small">Lifetime Deals</StandardizedTableHead>
+            <StandardizedTableHead width="medium">Created</StandardizedTableHead>
+            <StandardizedTableHead width="action"></StandardizedTableHead>
+          </StandardizedTableRow>
+        </StandardizedTableHeader>
           <TableBody className={dataBlurClass}>
             {projects.map((project) => (
-              <TableRow key={project.id}>
-                <TableCell>
+              <StandardizedTableRow key={project.id}>
+                <StandardizedTableCell>
                   <div className="flex items-center space-x-3">
                     <div
                       className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: project.color_hex }}
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium text-sm">{project.name}</div>
+                      <div className="font-medium">{project.name}</div>
                       {project.description && (
                         <div className="text-xs text-muted-foreground truncate">
                           {project.description}
@@ -173,8 +172,8 @@ export function ProjectsTable({
                       )}
                     </div>
                   </div>
-                </TableCell>
-                <TableCell>
+                </StandardizedTableCell>
+                <StandardizedTableCell>
                   {project.client_name ? (
                     <div className="flex items-center space-x-2">
                       {project.client_color && (
@@ -183,44 +182,44 @@ export function ProjectsTable({
                           style={{ backgroundColor: project.client_color }}
                         />
                       )}
-                      <span className="text-sm">{project.client_name}</span>
+                      <span>{project.client_name}</span>
                     </div>
                   ) : (
-                    <span className="text-xs text-muted-foreground">Internal</span>
+                    <span className="text-muted-foreground">Internal</span>
                   )}
-                </TableCell>
-                <TableCell>
+                </StandardizedTableCell>
+                <StandardizedTableCell>
                   <Badge variant="secondary" className={getStatusColor(project.status)}>
                     {project.status}
                   </Badge>
-                </TableCell>
-                <TableCell className="text-right font-mono text-sm">
+                </StandardizedTableCell>
+                <StandardizedTableCell variant="numeric" className="font-mono">
                   {project.monthly_cost ? formatCurrency(project.monthly_cost) : '-'}
-                </TableCell>
-                <TableCell className="text-right">
+                </StandardizedTableCell>
+                <StandardizedTableCell variant="numeric">
                   <div className="flex items-center justify-end space-x-1">
                     <BarChart3 className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-sm">{project.subscription_count || 0}</span>
+                    <span>{project.subscription_count || 0}</span>
                   </div>
-                </TableCell>
-                <TableCell className="text-right">
+                </StandardizedTableCell>
+                <StandardizedTableCell variant="numeric">
                   <div className="flex items-center justify-end space-x-1">
                     <DollarSign className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-sm">{project.lifetime_deal_count || 0}</span>
+                    <span>{project.lifetime_deal_count || 0}</span>
                   </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                </StandardizedTableCell>
+                <StandardizedTableCell variant="secondary">
+                  <div className="flex items-center space-x-1">
                     <Calendar className="h-3 w-3" />
                     <span>
                       {formatDistanceToNow(new Date(project.created_at), { addSuffix: true })}
                     </span>
                   </div>
-                </TableCell>
-                <TableCell>
+                </StandardizedTableCell>
+                <StandardizedActionCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
+                      <Button variant="ghost" className={STANDARDIZED_STYLES.ACTION_BUTTON}>
                         <span className="sr-only">Open menu</span>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
@@ -244,12 +243,11 @@ export function ProjectsTable({
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </TableCell>
-              </TableRow>
+                </StandardizedActionCell>
+              </StandardizedTableRow>
             ))}
           </TableBody>
-        </Table>
-      </Card>
+      </StandardizedTable>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!projectToDelete} onOpenChange={() => setProjectToDelete(null)}>

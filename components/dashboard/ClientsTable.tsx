@@ -16,20 +16,26 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Table,
   TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '@/components/ui/table';
+import {
+  StandardizedTable,
+  StandardizedTableHeader,
+  StandardizedTableRow,
+  StandardizedTableHead,
+  StandardizedTableCell,
+  StandardizedCheckboxCell,
+  StandardizedActionCell,
+  StandardizedBulkToolbar,
+  STANDARDIZED_STYLES,
+} from './StandardizedTable';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { 
   Search, 
   Filter, 
@@ -37,9 +43,6 @@ import {
   Edit, 
   Copy, 
   Trash2, 
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
   Users,
   DollarSign,
   Building,
@@ -48,7 +51,6 @@ import {
   AlertCircle,
   Plus,
   Download,
-  Palette,
   Star
 } from 'lucide-react';
 import { useClientsWithCosts, useDeleteClient, useExportClients, type Client } from '@/lib/react-query/clients';
@@ -370,15 +372,6 @@ export function ClientsTable({
     exportClientsMutation.mutate(format);
   };
 
-  // Render sort icon
-  const renderSortIcon = (field: SortField) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className="ml-2 h-4 w-4" />;
-    }
-    return sortDirection === 'asc' ? 
-      <ArrowUp className="ml-2 h-4 w-4" /> : 
-      <ArrowDown className="ml-2 h-4 w-4" />;
-  };
 
   if (error) {
     return (
@@ -456,23 +449,21 @@ export function ClientsTable({
 
       {/* Bulk actions */}
       {userRole === 'admin' && selectedClients.size > 0 && (
-        <div className="flex items-center justify-between p-3 bg-violet-50 border border-violet-200 rounded-lg">
-          <span className="text-sm font-medium text-violet-900">
-            {selectedClients.size} client(s) selected
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleBulkDelete}
-              disabled={deleteClientMutation.isPending}
-              className="text-red-600 border-red-200 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Selected
-            </Button>
-          </div>
-        </div>
+        <StandardizedBulkToolbar
+          selectedCount={selectedClients.size}
+          onClearSelection={() => setSelectedClients(new Set())}
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleBulkDelete}
+            disabled={deleteClientMutation.isPending}
+            className="text-red-600 border-red-200 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Selected
+          </Button>
+        </StandardizedBulkToolbar>
       )}
 
       {/* Loading State */}
@@ -523,194 +514,167 @@ export function ClientsTable({
       {!isLoading && filteredAndSortedClients.length > 0 && (
         <>
           <div className="hidden md:block">
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50">
+            <StandardizedTable>
+              <StandardizedTableHeader>
+                <StandardizedTableRow>
+                  {userRole === 'admin' && (
+                    <StandardizedTableHead width="checkbox">
+                      <Checkbox
+                        checked={selectedClients.size === filteredAndSortedClients.length}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </StandardizedTableHead>
+                  )}
+                  <StandardizedTableHead
+                    width="large"
+                    sortable
+                    sortDirection={sortField === 'name' ? sortDirection : null}
+                    onSort={() => handleSort('name')}
+                  >
+                    Client
+                  </StandardizedTableHead>
+                  <StandardizedTableHead
+                    width="medium"
+                    sortable
+                    sortDirection={sortField === 'email' ? sortDirection : null}
+                    onSort={() => handleSort('email')}
+                  >
+                    Email
+                  </StandardizedTableHead>
+                  <StandardizedTableHead
+                    width="small"
+                    sortable
+                    sortDirection={sortField === 'status' ? sortDirection : null}
+                    onSort={() => handleSort('status')}
+                  >
+                    Status
+                  </StandardizedTableHead>
+                  <StandardizedTableHead
+                    width="small"
+                    sortable
+                    sortDirection={sortField === 'subscription_count' ? sortDirection : null}
+                    onSort={() => handleSort('subscription_count')}
+                  >
+                    Subscriptions
+                  </StandardizedTableHead>
+                  <StandardizedTableHead
+                    width="small"
+                    sortable
+                    sortDirection={sortField === 'lifetime_deal_count' ? sortDirection : null}
+                    onSort={() => handleSort('lifetime_deal_count')}
+                  >
+                    Lifetime Deals
+                  </StandardizedTableHead>
+                  <StandardizedTableHead
+                    width="medium"
+                    sortable
+                    sortDirection={sortField === 'monthly_cost' ? sortDirection : null}
+                    onSort={() => handleSort('monthly_cost')}
+                  >
+                    Monthly Cost
+                  </StandardizedTableHead>
+                  <StandardizedTableHead
+                    width="medium"
+                    sortable
+                    sortDirection={sortField === 'annual_cost' ? sortDirection : null}
+                    onSort={() => handleSort('annual_cost')}
+                  >
+                    Annual Cost
+                  </StandardizedTableHead>
+                  {userRole === 'admin' && <StandardizedTableHead width="action"></StandardizedTableHead>}
+                </StandardizedTableRow>
+              </StandardizedTableHeader>
+              <TableBody className={dataBlurClass}>
+                {filteredAndSortedClients.map((client) => (
+                  <StandardizedTableRow key={client.id}>
                     {userRole === 'admin' && (
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={selectedClients.size === filteredAndSortedClients.length}
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </TableHead>
+                      <StandardizedCheckboxCell
+                        checked={selectedClients.has(client.id)}
+                        onCheckedChange={(checked) => handleSelectClient(client.id, !!checked)}
+                      />
                     )}
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold"
-                        onClick={() => handleSort('name')}
-                      >
-                        Client
-                        {renderSortIcon('name')}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold"
-                        onClick={() => handleSort('email')}
-                      >
-                        Email
-                        {renderSortIcon('email')}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold"
-                        onClick={() => handleSort('status')}
-                      >
-                        Status
-                        {renderSortIcon('status')}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold"
-                        onClick={() => handleSort('subscription_count')}
-                      >
-                        Subscriptions
-                        {renderSortIcon('subscription_count')}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold"
-                        onClick={() => handleSort('lifetime_deal_count')}
-                      >
-                        Lifetime Deals
-                        {renderSortIcon('lifetime_deal_count')}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold"
-                        onClick={() => handleSort('monthly_cost')}
-                      >
-                        Monthly Cost
-                        {renderSortIcon('monthly_cost')}
-                      </Button>
-                    </TableHead>
-                    <TableHead>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold"
-                        onClick={() => handleSort('annual_cost')}
-                      >
-                        Annual Cost
-                        {renderSortIcon('annual_cost')}
-                      </Button>
-                    </TableHead>
-                    {userRole === 'admin' && <TableHead className="w-12"></TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody className={dataBlurClass}>
-                  {filteredAndSortedClients.map((client) => (
-                    <TableRow key={client.id} className="hover:bg-slate-50">
-                      {userRole === 'admin' && (
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedClients.has(client.id)}
-                            onCheckedChange={(checked) => handleSelectClient(client.id, !!checked)}
-                          />
-                        </TableCell>
+                    <StandardizedTableCell>
+                      <div className="flex items-center space-x-3">
+                        <div 
+                          className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+                          style={{ backgroundColor: client.color_hex }}
+                          title="Client color"
+                        />
+                        <div className="font-semibold">{client.name}</div>
+                      </div>
+                    </StandardizedTableCell>
+                    <StandardizedTableCell>
+                      {client.email ? (
+                        <div className="flex items-center">
+                          <Mail className="w-4 h-4 mr-2" />
+                          {client.email}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
                       )}
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <div 
-                            className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-                            style={{ backgroundColor: client.color_hex }}
-                            title="Client color"
-                          />
-                          <div>
-                            <div className="font-semibold text-slate-900">{client.name}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {client.email ? (
-                          <div className="flex items-center text-slate-600">
-                            <Mail className="w-4 h-4 mr-2" />
-                            {client.email}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={cn(getStatusColor(client.status))}>
-                          {client.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center text-slate-900">
-                          <Building className="w-4 h-4 mr-2 text-slate-400" />
-                          {client.subscription_count || 0}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center text-slate-900">
-                          <Star className="w-4 h-4 mr-2 text-slate-400" />
-                          {client.lifetime_deal_count || 0}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center font-medium text-violet-600">
-                          <DollarSign className="w-4 h-4 mr-1" />
-                          {formatCurrency(client.monthly_cost || 0)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center font-medium text-violet-600">
-                          <DollarSign className="w-4 h-4 mr-1" />
-                          {formatCurrency(client.annual_cost || 0)}
-                        </div>
-                      </TableCell>
-                      {userRole === 'admin' && (
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => onEditClient?.(client)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => onDuplicateClient?.(client)}>
-                                <Copy className="mr-2 h-4 w-4" />
-                                Duplicate
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleDelete(client.id)}
-                                className="text-red-600"
-                                disabled={deleteClientMutation.isPending}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                    </StandardizedTableCell>
+                    <StandardizedTableCell>
+                      <Badge className={cn(getStatusColor(client.status))}>
+                        {client.status}
+                      </Badge>
+                    </StandardizedTableCell>
+                    <StandardizedTableCell>
+                      <div className="flex items-center">
+                        <Building className="w-4 h-4 mr-2 text-muted-foreground" />
+                        {client.subscription_count || 0}
+                      </div>
+                    </StandardizedTableCell>
+                    <StandardizedTableCell>
+                      <div className="flex items-center">
+                        <Star className="w-4 h-4 mr-2 text-muted-foreground" />
+                        {client.lifetime_deal_count || 0}
+                      </div>
+                    </StandardizedTableCell>
+                    <StandardizedTableCell variant="numeric">
+                      <div className="flex items-center justify-end font-medium text-violet-600">
+                        <DollarSign className="w-4 h-4 mr-1" />
+                        {formatCurrency(client.monthly_cost || 0)}
+                      </div>
+                    </StandardizedTableCell>
+                    <StandardizedTableCell variant="numeric">
+                      <div className="flex items-center justify-end font-medium text-violet-600">
+                        <DollarSign className="w-4 h-4 mr-1" />
+                        {formatCurrency(client.annual_cost || 0)}
+                      </div>
+                    </StandardizedTableCell>
+                    {userRole === 'admin' && (
+                      <StandardizedActionCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className={STANDARDIZED_STYLES.ACTION_BUTTON}>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onEditClient?.(client)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onDuplicateClient?.(client)}>
+                              <Copy className="mr-2 h-4 w-4" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(client.id)}
+                              className="text-red-600"
+                              disabled={deleteClientMutation.isPending}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </StandardizedActionCell>
+                    )}
+                  </StandardizedTableRow>
+                ))}
+              </TableBody>
+            </StandardizedTable>
           </div>
 
           {/* Mobile Cards */}
